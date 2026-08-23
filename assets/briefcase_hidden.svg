@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Ordinary briefcase disguise</title>
+  <desc>The animated briefcase's leather body with ordinary locks and no face or limbs.</desc>
+  
+      <ellipse cx="128" cy="211" rx="72" ry="10" fill="#1a1720" opacity=".18"/>
+      
+      <path d="M 88 91.0 V 63.0 Q 88 45.0 106 45.0 H 150 Q 168 45.0 168 63.0 V 91.0"
+            fill="none" stroke="#2b180d" stroke-width="17" stroke-linejoin="round"/>
+      <path d="M 88 91.0 V 63.0 Q 88 45.0 106 45.0 H 150 Q 168 45.0 168 63.0 V 91.0"
+            fill="none" stroke="#74401f" stroke-width="10" stroke-linejoin="round"/>
+    
+      
+      <rect x="35" y="83.0" width="186" height="121" rx="10" fill="#a96536" stroke="#2b180d" stroke-width="6"/>
+      <rect x="43" y="91.0" width="170" height="105" rx="6" fill="none" stroke="#bd7b45" stroke-width="4" opacity=".42"/>
+      <path d="M 44 111.0 H 212" stroke="#bd7b45" stroke-width="5" opacity=".34"/>
+    
+      <path d="M 43 139 H 213" stroke="#4a2815" stroke-width="5" opacity=".72"/>
+      <g fill="#d89a36" stroke="#2b180d" stroke-width="3">
+        <rect x="76" y="126" width="20" height="22" rx="4"/>
+        <rect x="160" y="126" width="20" height="22" rx="4"/>
+      </g>
+      <circle cx="86" cy="137" r="3" fill="#2b180d"/>
+      <circle cx="170" cy="137" r="3" fill="#2b180d"/>
+      <path d="M 55 181 Q 128 194 201 181" fill="none" stroke="#4a2815" stroke-width="4" opacity=".5"/>
+    
+</svg>

@@ -2,53 +2,76 @@
 
 ## What this project is
 
-Briefcase Game is a small Godot 4 isometric 3D browser prototype. The player controls a camera-facing briefcase sprite and moves it around five stationary, low-poly people on a flat grid.
+Briefcase Game is a browser-first Godot 4 stealth game set in an illustrated office. The player guides a camera-facing briefcase through a scrolling maze of cubicles while avoiding patrolling office workers and their visible sight cones.
 
-There is currently no score, dialogue, win condition, or interaction system. Treat the project as a movement and presentation prototype unless the user asks to expand the game design.
+The goal is to travel from the start of the office to the exit. Being seen normally resets the level. The briefcase can temporarily disguise itself as an ordinary case, causing a worker to carry it somewhere else instead of catching it.
 
 ## Current behaviour
 
-- Move with `WASD` or the four arrow keys.
-- Movement is relative to the isometric screen, not raw world axes.
-- The briefcase collides with the static people.
-- World boundaries clamp the briefcase to `-7.5...7.5` on the X and Z axes.
-- The camera is fixed, orthographic, and does not follow the player.
+- Move with `WASD` or the arrow keys.
+- Movement is limited to four screen-aligned cardinal directions; diagonal input resolves to one axis.
+- Press `Space` to toggle the temporary disguise.
+- Collectibles replenish disguise time.
+- Press `P` to pause or resume.
+- Workers patrol fixed routes, face their movement direction, react to the player, and collide with office geometry.
+- Visible vision cones match the real detection angle and range and are clipped by sight-blocking geometry.
+- Office furniture and walls provide movement obstacles, cover, and readable stealth routes.
+- Reaching the exit completes and freezes the level.
 - There is deliberately no click-to-move or touch-to-move behaviour.
 
-The screen-relative movement conversion is in `_physics_process()`:
+## Camera and isometric presentation
+
+The gameplay view uses an orthographic, pitched top-down camera. It has an isometric-style 2.5D appearance, but it remains aligned with the world axes rather than using a rotated diamond-grid basis.
+
+Movement currently depends on that alignment. `_update_player()` converts screen input directly into the ground plane:
 
 ```gdscript
-Vector3(input_vector.x + input_vector.y, 0.0, -input_vector.x + input_vector.y)
+Vector3(input_vector.x, 0.0, input_vector.y)
 ```
 
-Preserve this relationship unless changing the camera orientation and controls together.
+Preserve this relationship unless the camera orientation and controls are deliberately redesigned together. Rotating the camera around the vertical axis would also require coordinated changes to movement, directional animations, patrol readability, level layout, and input testing.
+
+The camera follows the player smoothly and clamps its focus near the office boundaries. Keep the focus at floor level while the briefcase is being carried or animated vertically so the view does not bump. Start and exit framing should remain readable near the edges of the level.
+
+Characters and illustrated props are camera-facing 2D sprites inside a real 3D world used for collision, lighting, and sight checks. Preserve this hybrid approach: artwork should remain clear and grounded at the current camera pitch while shallow geometry supplies physical depth and occlusion.
+
+## Art direction
+
+The established style is a clean, colourful office cartoon with bold outlines, readable silhouettes, warm character accents, and subdued workplace colours. It should feel illustrated and playful while remaining immediately legible at browser-game scale.
+
+- Keep characters expressive and easy to distinguish during movement and stealth reactions.
+- Keep directional poses and animation states visually consistent across the cast.
+- Use transparent, outlined scenery that reads naturally from the pitched camera angle.
+- Keep floor textures restrained so they do not compete with characters, paths, collectibles, or vision cones.
+- Maintain coherent scale, lighting, outline weight, and ground contact across new artwork.
+- The title presentation may be more energetic and cinematic, but it should still feel like the same office world and character design.
+- UI should remain high contrast, friendly, and consistent with the dark office-stealth palette.
+
+Avoid mixing in pixel art, photorealistic characters, or unrelated low-poly styles. Review new artwork beside the existing cast and scenery before adding it to gameplay.
+
+## Sound direction
+
+The sound style is playful, understated office stealth. It combines a light suspenseful music bed with recognisable workplace ambience and soft, distinct action cues.
+
+- Music should create tension without feeling threatening or overpowering gameplay.
+- Office ambience should make the setting feel active while leaving important cues audible.
+- Sound effects should be short, warm, and easy to distinguish from one another.
+- Pause and resume sounds must still work while the game is paused.
+- Keep all audio compressed and compatible with browser export.
+
+Avoid harsh arcade sounds or exaggerated cinematic effects unless the overall audio direction is intentionally changed. Preserve source and licence notes for third-party recordings.
 
 ## Architecture
 
-`main.tscn` contains only the root `Node3D`. `scripts/main.gd` constructs the complete runtime scene in code:
+The main scene contains a minimal root node, while the primary gameplay script constructs the current prototype in code. It builds the office, player, workers, camera, HUD, and audio systems.
 
-1. `_build_world()` creates lighting, the ground, grid, and people.
-2. `_build_player()` creates the `CharacterBody3D`, collision capsule, and briefcase `Sprite3D`.
-3. `_build_camera()` creates the fixed isometric camera.
-4. `_build_hud()` creates the instruction panel.
+Supporting scripts separate title-screen behaviour, pause handling, shared animation setup, and the standalone asset gallery. Continue splitting out systems when the main gameplay script becomes difficult to navigate, but keep changes small and prototype-friendly.
 
-The briefcase visual is `assets/briefcase.svg`. It is shown as a billboarded `Sprite3D`, so it remains a static 2D image while moving through a true 3D scene.
-
-People are `StaticBody3D` nodes made from primitive meshes and capsule collision shapes. Their positions and colours are defined by the `PEOPLE` constant near the top of `scripts/main.gd`.
-
-## Important files
-
-- `project.godot`: project settings, input actions, viewport, and Compatibility renderer.
-- `main.tscn`: main scene and script attachment.
-- `scripts/main.gd`: all gameplay, world construction, camera, and HUD code.
-- `assets/briefcase.svg`: static player artwork.
-- `export_presets.cfg`: single-threaded Web export preset.
-- `start-game.sh`: exports, serves, and opens the browser build.
-- `build/web/`: generated browser output; ignored by Git and safe to regenerate.
+The asset gallery is the preferred place to compare character animation, scenery, music, ambience, and sound effects without running the full level.
 
 ## Input-map warning
 
-Keep input actions in `project.godot` named `move_left`, `move_right`, `move_up`, and `move_down`.
+Keep the input actions named `move_left`, `move_right`, `move_up`, `move_down`, `toggle_disguise`, and `toggle_pause`.
 
 Godot 4 arrow-key physical keycodes are:
 
@@ -57,27 +80,25 @@ Godot 4 arrow-key physical keycodes are:
 - Right: `4194321`
 - Down: `4194322`
 
-Do not use `4194311` or `4194313` for horizontal movement; those represent Insert and Pause, respectively. Letter controls use physical keys so `WASD` remains based on keyboard position.
+Do not use `4194311` or `4194313` for horizontal movement; those are Insert and Pause. Letter controls use physical keys so `WASD` remains based on keyboard position.
 
 ## Browser requirements
 
 The browser is a primary target, not an optional port:
 
-- Keep the renderer set to `gl_compatibility`; Forward+ and Mobile cannot export to Godot 4 Web.
-- Keep the Web export single-threaded unless hosting is explicitly changed to provide the required cross-origin isolation headers.
+- Keep the renderer set to `gl_compatibility`.
+- Keep the Web export single-threaded unless hosting provides the required cross-origin isolation headers.
 - Avoid C# and platform-specific native extensions.
-- Keep assets and scene complexity modest for download size and low-end browser performance.
-- Browser builds must be served over HTTP; opening `index.html` directly is insufficient.
+- Keep artwork, audio, scene complexity, and simultaneous effects modest for download size and low-end browser performance.
+- Browser builds must be served over HTTP rather than opened directly from disk.
 
 ## Running and validation
 
-The expected local launcher is:
+Use the project launcher for normal browser development:
 
 ```sh
 ./start-game.sh
 ```
-
-It exports to `build/web`, serves on port `8080`, and opens the browser. Stop it with `Ctrl+C`.
 
 For automated or background checks:
 
@@ -85,31 +106,41 @@ For automated or background checks:
 BRIEFCASE_PORT=8081 BRIEFCASE_OPEN_BROWSER=0 ./start-game.sh
 ```
 
-Validate gameplay code without opening a window:
+Validate gameplay without opening a window:
 
 ```sh
-godot --headless --path . --quit-after 3
+godot --headless --path . --quit-after 3 -- --skip-title
 ```
 
-Rebuild only the Web export:
+Review visual and audio work independently with:
 
 ```sh
-mkdir -p build/web
-godot --headless --path . --export-release Web build/web/index.html
+./view-gallery.sh
 ```
 
-After gameplay, input, rendering, or export changes:
+After gameplay, input, camera, rendering, audio, or export changes:
 
-1. Run the headless project and check for GDScript/runtime errors.
-2. Rebuild the Web export.
-3. Serve the build and verify it loads without browser-console errors.
-4. Exercise all eight keyboard directions with both `WASD` and arrow keys when input code changes.
+1. Run the headless project and check for runtime errors.
+2. Rebuild and serve the Web export.
+3. Verify the browser build loads and plays without console or audio errors.
+4. Test all four movement directions with both keyboard schemes and confirm paired input suppresses diagonals.
+5. Check camera framing, sprite grounding, corridor readability, vision-cone alignment, and cover throughout the level.
+6. Listen to affected audio in context with the music and ambience running.
+
+## Asset generation
+
+- Never print, log, paste, or commit locally stored API keys.
+- Keep secrets and temporary generation files out of the shipped asset directories.
+- Store only final game-ready assets under `assets/`.
+- Update the relevant generator whenever a generated asset is intentionally changed.
+- Review generated visual and audio work in the asset gallery before wiring it into gameplay.
 
 ## Change guidelines
 
 - Keep changes small and prototype-friendly.
-- Update the HUD and `README.md` whenever controls change.
-- Do not reintroduce pointer movement unless the user explicitly requests it.
-- Add gameplay systems as separate scripts/scenes once `main.gd` becomes difficult to navigate; the current single-script structure is intentional only while the prototype is small.
-- Preserve the SVG as a fallback if introducing generated or raster briefcase artwork.
-
+- Update the title screen, HUD, README, and this guide when controls or core rules change.
+- Do not reintroduce pointer movement unless explicitly requested.
+- Keep visible vision cones aligned with real detection and sight blockers.
+- Treat start safety, exit reachability, connected routes, cover, patrol timing, collectible accessibility, worker drop points, and camera framing as level-design invariants.
+- Preserve the camera/input relationship and illustrated-sprite/3D-collision hybrid unless a coordinated redesign is requested.
+- Preserve the understated office-stealth sound direction unless an audio redesign is requested.

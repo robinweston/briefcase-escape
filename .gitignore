@@ -27,3 +27,7 @@ mono_crash.*.json
 *.tmp
 /tmp/
 /output/
+
+# Python generator caches
+__pycache__/
+*.py[cod]

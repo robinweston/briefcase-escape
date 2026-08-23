@@ -35,6 +35,14 @@ move_down={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventKey,"physical_keycode":4194322)]
 }
+toggle_disguise={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":32)]
+}
+toggle_pause={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":80)]
+}
 
 [rendering]
 
