@@ -11,9 +11,9 @@ const MISSION_TITLE := "CONFIDENTIAL MISSION FILE"
 const MISSION_BYLINE := "MADE BY BOSS DUCK GAMES"
 const HOW_TO_PLAY_HEADING := "HOW TO PLAY"
 const HOW_TO_PLAY_STEPS := [
-	"Cross the office unseen and reach the exit without being spotted.",
+	"Escape three increasingly difficult office floors without being spotted.",
 	"Enter disguise mode to look like a normal briefcase and avoid detection (although you may be tidied away!).",
-	"Diguise mode can only be activiated for a limited time.",
+	"Disguise mode can only be activated for a limited time.",
 	"Collect potions to restore one second of disguise mode time.",
 ]
 const CONTROLS_HEADING := "CONTROLS"

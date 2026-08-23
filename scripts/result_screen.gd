@@ -22,7 +22,10 @@ func _ready() -> void:
 func show_report(succeeded: bool, floor_number: int) -> void:
 	report_heading.text = "ESCAPE REPORT · FLOOR %02d" % floor_number
 	stamp_label.text = "CLEARED" if succeeded else "CAUGHT"
-	prompt_label.text = "PRESS START: NEXT LEVEL" if succeeded else "PRESS SPACE TO RETRY"
+	if succeeded:
+		prompt_label.text = "PRESS START: PLAY AGAIN" if floor_number >= 3 else "PRESS START: NEXT LEVEL"
+	else:
+		prompt_label.text = "PRESS SPACE TO RETRY"
 
 	var stamp_color := Color("#168568") if succeeded else Color("#bd2f35")
 	stamp_label.add_theme_color_override("font_color", stamp_color)

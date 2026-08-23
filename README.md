@@ -14,7 +14,7 @@ Major actions use the selected soft-office sound-effect set: starting, walking,
 transforming, collecting potions, worker alerts, pickup/drop, being caught,
 completing the level, and pausing/resuming all have distinct cues.
 
-The game opens on the **Briefcase Escape** title screen. Review the instructions and controls there, then press `Space`, `Enter`, or gamepad Start to begin. After the worker's surprise animation, being caught opens an **Escape Report**; press `Space` to retry. Reaching the exit opens the matching cleared report; press Start to continue to the next floor. The current prototype reuses the same office layout for subsequent floor numbers.
+The game opens on the **Briefcase Escape** title screen. Review the instructions and controls there, then press `Space`, `Enter`, or gamepad Start to begin. After the worker's surprise animation, being caught opens an **Escape Report**; press `Space` to retry. Reaching the exit opens the matching cleared report; press Start to continue to the next floor. There are three distinct floors: a forgiving introduction, a boardroom with six stationary coworkers facing into their conversation, and the full office challenge. Clearing floor three offers a fresh run from floor one.
 
 The title screen and first level share a continuous loop of **Stealth in the
 Woods**, layered with busy office chatter, phones, writing, and typing.
@@ -77,6 +77,14 @@ Godot editor you can also open `asset_gallery.tscn` and press **F6**. Godot's
 SpriteFrames editor previews one sprite animation; this gallery is provided to
 compare the complete cast.
 
+The **Level Map** tab contains separate **Level 1**, **Level 2**, and **Level 3**
+tabs showing each live layout, its patrol overlays, and its stationary-worker
+count.
+
+Run `./capture-level-map.sh` to regenerate whole-floor snapshots for all three
+levels. Floor one keeps the legacy `level-layout-snapshot.png` filename; floors
+two and three use numbered snapshot filenames.
+
 ## Export for the browser
 
 The Web export preset is already configured for the Compatibility renderer and a single-threaded browser build:
@@ -88,6 +96,18 @@ python3 -m http.server --directory build/web 8080
 
 Open `http://localhost:8080`. Web exports must be served over HTTP; opening `index.html` directly from disk is not supported.
 
+## Deploy with GitHub Pages
+
+The `Deploy game to GitHub Pages` workflow exports and deploys the Web build
+whenever `main` is updated. It can also be run manually from the repository's
+**Actions** tab.
+
+Before the first deployment, open **Settings → Pages** in GitHub and select
+**GitHub Actions** as the publishing source. After the first successful run, add
+the site's domain under **Settings → Pages → Custom domain**, configure the
+matching DNS records with the domain provider, and enable **Enforce HTTPS** once
+GitHub has issued the certificate.
+
 ## Project layout
 
 - `scripts/main.gd` builds the top-down world, player, people, camera, and UI.
@@ -98,14 +118,14 @@ Open `http://localhost:8080`. Web exports must be served over HTTP; opening `ind
 - `assets/briefcase_hidden.svg` is the matching ordinary-case disguise artwork.
 - `assets/briefcase.svg` remains as the original static player-art fallback.
 - `assets/scenery/generated/` contains the illustrated workstation, divider,
-  cabinet, plant, printer, vending machine, bathroom fixtures, exit-sign, and
-  disguise-potion sprites used by the level and gallery.
+  cabinet, plant, printer, vending machine, bathroom fixtures, boardroom table,
+  exit-sign, and disguise-potion sprites used by the level and gallery.
 - `assets/audio/` contains the CC0 music candidates, busy office ambience, 36 original sound-effect candidates, and source/license notes.
 - `tools/generate_briefcase_walk_atlas.py` regenerates both matching briefcase vector assets.
 - `tools/generate_office_worker_variants.py` defines modular worker appearances.
 - `tools/generate_office_worker_animations.py` regenerates worker animation atlases.
 - `tools/office_prop_prompts.jsonl` records the OpenAI Image API prompt set for
-  the printer, vending machine, sinks, and toilet scenery.
+  generated office scenery, including the boardroom table.
 - `tools/office_prop_rotation_manifest.json` defines the reference-image prompts,
   filenames, and S/E/N/W ordering for directional static-prop views.
 - `tools/generate_sound_effects.py` regenerates the original procedural sound-effect candidates.

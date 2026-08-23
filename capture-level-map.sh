@@ -10,11 +10,18 @@ if ! command -v godot >/dev/null 2>&1; then
 fi
 
 cd "${project_dir}"
-godot \
-  --path . \
-  --resolution 1280x720 \
-  asset_gallery.tscn \
-  -- \
-  --capture-level-map=res://level-layout-snapshot.png
-
-echo "Updated ${project_dir}/level-layout-snapshot.png"
+for level in 1 2 3; do
+  snapshot="level-${level}-layout-snapshot.png"
+  if [[ "${level}" == "1" ]]; then
+    snapshot="level-layout-snapshot.png"
+  fi
+  godot \
+    --audio-driver Dummy \
+    --path . \
+    --resolution 1280x720 \
+    asset_gallery.tscn \
+    -- \
+    --capture-level-map="res://${snapshot}" \
+    --start-level="${level}"
+  echo "Updated ${project_dir}/${snapshot}"
+done

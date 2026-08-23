@@ -12,13 +12,16 @@ const OFFICE_PRINTER_TILES := Vector3i(3, 3, 2)
 const VENDING_MACHINE_TILES := Vector3i(3, 4, 2)
 const BATHROOM_SINKS_TILES := Vector3i(5, 3, 2)
 const BATHROOM_TOILET_TILES := Vector3i(2, 2, 2)
+const BOARDROOM_TABLE_TILES := Vector3i(16, 2, 7)
 const MOVE_SPEED := 4.2
 const WORKER_SPEED := 1.35
+const WORKER_UTURN_PAUSE := 1.25
 const VISION_RANGE := 3.8
 const VISION_HALF_ANGLE := deg_to_rad(30.0)
 const VISION_RAY_COUNT := 17
-const START_POSITION := Vector3(-13.5, 0.0, 8.3)
-const EXIT_POSITION := Vector3(13.5, 0.0, -8.3)
+const VISION_RAY_MIN_HEIGHT := 0.45
+const BOARDROOM_TABLE_COLLISION_HEIGHT := 0.40
+const LEVEL_COUNT := 3
 const CAMERA_OFFSET := Vector3(0.0, 12.0, 10.0)
 const CAMERA_FOCUS_X_LIMIT := 3.9
 const CAMERA_FOCUS_MIN_Z := -5.5
@@ -44,6 +47,7 @@ const OFFICE_PRINTER_TEXTURE := preload("res://assets/scenery/generated/office-p
 const VENDING_MACHINE_TEXTURE := preload("res://assets/scenery/generated/vending-machine.png")
 const BATHROOM_SINKS_TEXTURE := preload("res://assets/scenery/generated/bathroom-sinks.png")
 const BATHROOM_TOILET_TEXTURE := preload("res://assets/scenery/generated/bathroom-toilet.png")
+const BOARDROOM_TABLE_TEXTURE := preload("res://assets/scenery/generated/boardroom-table.png")
 const LEVEL_MUSIC := preload("res://assets/audio/stealth_in_the_woods.mp3")
 const OFFICE_AMBIENCE := preload("res://assets/audio/busy_office_ambience.mp3")
 const SFX_GAME_START := preload("res://assets/audio/sfx/game_start_1.wav")
@@ -82,7 +86,7 @@ const PROP_INK := Color("#26344a")
 const WORKER_SPRITE_PIXEL_SIZE := 0.0093
 enum StaticPropFacing { SOUTH, EAST, NORTH, WEST }
 const BATHROOM_POTION_POSITION := Vector3(-12.75, 0.0, -8.35)
-const POTION_POSITIONS := [
+const LEVEL_THREE_POTION_POSITIONS := [
 	BATHROOM_POTION_POSITION,
 	Vector3(-11.0, 0.0, 0.2),
 	Vector3(-6.0, 0.0, 4.8),
@@ -93,7 +97,7 @@ const POTION_POSITIONS := [
 	Vector3(11.8, 0.0, 7.0),
 ]
 
-var worker_routes: Array[PackedVector3Array] = [
+var level_three_worker_routes: Array[PackedVector3Array] = [
 	# Long patrols use the partition doorways to move between rooms. The red
 	# worker starts by walking away from the briefcase and spends most of each
 	# circuit outside the starting room, giving the opening route room to breathe.
@@ -142,6 +146,14 @@ var worker_routes: Array[PackedVector3Array] = [
 	]),
 ]
 
+var worker_routes: Array[PackedVector3Array] = []
+var potion_positions: Array[Vector3] = []
+var stationary_worker_specs: Array[Dictionary] = []
+var start_position := Vector3.ZERO
+var exit_position := Vector3.ZERO
+var level_name := ""
+var level_root: Node3D
+
 var player: CharacterBody3D
 var player_sprite: AnimatedSprite3D
 var hidden_sprite: Sprite3D
@@ -152,6 +164,7 @@ var workers: Array[Dictionary] = []
 var cubicle_drop_points: Array[Vector3] = []
 var potions: Array[Node3D] = []
 var status_label: Label
+var floor_label: Label
 var hidden_time_bar: ProgressBar
 var hidden_time_label: Label
 var hidden_time_seconds_label: Label
@@ -188,7 +201,72 @@ var office_ambience_player: AudioStreamPlayer
 var sfx_player: AudioStreamPlayer
 
 
+func _requested_start_level() -> int:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--start-level="):
+			return clampi(int(argument.trim_prefix("--start-level=")), 1, LEVEL_COUNT)
+	return 1
+
+
+func _configure_level(level: int) -> void:
+	stationary_worker_specs.clear()
+	match level:
+		1:
+			level_name = "FIRST STEPS"
+			start_position = Vector3(-13.0, 0.0, 8.0)
+			exit_position = Vector3(13.0, 0.0, -8.0)
+			potion_positions.assign([
+				Vector3(-9.0, 0.0, 6.5), Vector3(-2.5, 0.0, 0.0),
+				Vector3(8.5, 0.0, -2.0), Vector3(10.5, 0.0, -7.0),
+			])
+			worker_routes.assign([
+				PackedVector3Array([
+					Vector3(-1.0, 0.0, 6.0), Vector3(9.0, 0.0, 6.0),
+					Vector3(9.0, 0.0, 1.0), Vector3(-1.0, 0.0, 1.0),
+				]),
+				PackedVector3Array([
+					Vector3(1.0, 0.0, -6.0), Vector3(-9.0, 0.0, -6.0),
+					Vector3(-9.0, 0.0, -1.0), Vector3(1.0, 0.0, -1.0),
+				]),
+			])
+		2:
+			level_name = "BOARDROOM BUZZ"
+			start_position = Vector3(-13.0, 0.0, 8.0)
+			exit_position = Vector3(13.0, 0.0, -8.0)
+			potion_positions.assign([
+				Vector3(-10.5, 0.0, 7.5), Vector3(-7.0, 0.0, 0.0),
+				Vector3(0.0, 0.0, 5.5), Vector3(0.0, 0.0, -5.5),
+				Vector3(7.0, 0.0, 0.0), Vector3(10.5, 0.0, -7.5),
+			])
+			worker_routes.assign([
+				PackedVector3Array([
+					Vector3(-10.0, 0.0, 7.0), Vector3(-6.5, 0.0, 7.0),
+					Vector3(-6.5, 0.0, -7.0), Vector3(-10.0, 0.0, -7.0),
+				]),
+				PackedVector3Array([
+					Vector3(8.0, 0.0, -7.0), Vector3(6.5, 0.0, -7.0),
+					Vector3(6.5, 0.0, 7.0), Vector3(8.0, 0.0, 7.0),
+				]),
+			])
+			stationary_worker_specs.assign([
+				{"position": Vector3(-2.0, 0.0, -2.7), "facing": Vector3.BACK},
+				{"position": Vector3(2.0, 0.0, -2.7), "facing": Vector3.BACK},
+				{"position": Vector3(-2.0, 0.0, 2.7), "facing": Vector3.FORWARD},
+				{"position": Vector3(2.0, 0.0, 2.7), "facing": Vector3.FORWARD},
+				{"position": Vector3(-4.7, 0.0, 0.0), "facing": Vector3.RIGHT},
+				{"position": Vector3(4.7, 0.0, 0.0), "facing": Vector3.LEFT},
+			])
+		_:
+			level_name = "THE FULL OFFICE"
+			start_position = Vector3(-13.5, 0.0, 8.3)
+			exit_position = Vector3(13.5, 0.0, -8.3)
+			potion_positions.assign(LEVEL_THREE_POTION_POSITIONS)
+			worker_routes.assign(level_three_worker_routes)
+
+
 func _ready() -> void:
+	floor_number = _requested_start_level()
+	_configure_level(floor_number)
 	_build_world()
 	_build_player()
 	_build_workers()
@@ -255,16 +333,17 @@ func _physics_process(delta: float) -> void:
 
 	var seeing_worker := _worker_that_sees_player()
 	if not seeing_worker.is_empty():
-		if hidden_mode and pickup_cooldown <= 0.0:
+		if hidden_mode and not seeing_worker["stationary"] and pickup_cooldown <= 0.0:
 			_begin_carry(seeing_worker)
+			return
 		elif not hidden_mode:
 			_caught(seeing_worker)
-		return
+			return
 
 	if hidden_mode and not starting_disguise and drop_disguise_grace_time <= 0.0:
 		_drain_hidden_time(delta)
 
-	if player.global_position.distance_to(EXIT_POSITION) < 0.8:
+	if player.global_position.distance_to(exit_position) < 0.8:
 		_complete_level()
 
 
@@ -316,9 +395,14 @@ func _screen_direction_name(input_vector: Vector2) -> StringName:
 	return &"s" if input_vector.y > 0.0 else &"n"
 
 
-func _update_workers(_delta: float) -> void:
+func _update_workers(delta: float) -> void:
 	for worker in workers:
 		var body: CharacterBody3D = worker["body"]
+		if worker["stationary"]:
+			body.velocity = Vector3.ZERO
+			_set_worker_animation(worker, &"idle")
+			_update_vision_cone(worker)
+			continue
 		if not carrying_worker.is_empty() and body == carrying_worker["body"]:
 			_update_carrying_worker(worker)
 			_update_vision_cone(worker)
@@ -335,9 +419,29 @@ func _update_workers(_delta: float) -> void:
 		var target: Vector3 = route[worker["index"]]
 		var offset := target - body.position
 		offset.y = 0.0
+		if worker["turn_pause_remaining"] > 0.0:
+			worker["turn_pause_remaining"] = maxf(
+				worker["turn_pause_remaining"] - delta, 0.0
+			)
+			body.velocity = Vector3.ZERO
+			_set_worker_animation(worker, &"idle")
+			_update_vision_cone(worker)
+			continue
 
 		if offset.length() < 0.12:
+			var current_index: int = worker["index"]
+			if (
+				worker["paused_route_index"] != current_index
+				and _route_turns_back(route, current_index)
+			):
+				worker["paused_route_index"] = current_index
+				worker["turn_pause_remaining"] = WORKER_UTURN_PAUSE
+				body.velocity = Vector3.ZERO
+				_set_worker_animation(worker, &"idle")
+				_update_vision_cone(worker)
+				continue
 			worker["index"] = (worker["index"] + 1) % route.size()
+			worker["paused_route_index"] = -1
 			target = route[worker["index"]]
 			offset = target - body.position
 			offset.y = 0.0
@@ -348,6 +452,14 @@ func _update_workers(_delta: float) -> void:
 		_set_worker_animation(worker, &"walk", direction)
 		body.move_and_slide()
 		_update_vision_cone(worker)
+
+
+func _route_turns_back(route: PackedVector3Array, point_index: int) -> bool:
+	var previous_index := (point_index - 1 + route.size()) % route.size()
+	var next_index := (point_index + 1) % route.size()
+	var incoming := (route[point_index] - route[previous_index]).normalized()
+	var outgoing := (route[next_index] - route[point_index]).normalized()
+	return incoming.dot(outgoing) < -0.99
 
 
 func _update_pickup_worker(worker: Dictionary) -> void:
@@ -543,7 +655,7 @@ func _worker_that_sees_player() -> Dictionary:
 		if not worker["vision_enabled"]:
 			continue
 		var origin := body.global_position + Vector3(0.0, 0.52, 0.0)
-		var target := player.global_position + Vector3(0.0, 0.45, 0.0)
+		var target := player.global_position + Vector3(0.0, VISION_RAY_MIN_HEIGHT, 0.0)
 		var to_player := target - origin
 		var flat_to_player := Vector3(to_player.x, 0.0, to_player.z)
 
@@ -701,7 +813,7 @@ func _reset_level() -> void:
 	excursion_route.clear()
 	pickup_cooldown = 0.0
 	drop_disguise_grace_time = 0.0
-	player.position = START_POSITION
+	player.position = start_position
 	player.velocity = Vector3.ZERO
 	player_collision.disabled = false
 	player_facing = &"s"
@@ -721,15 +833,19 @@ func _reset_level() -> void:
 		_set_worker_vision_enabled(worker, true)
 		worker["return_route"] = PackedVector3Array()
 		worker["return_route_index"] = 0
+		worker["turn_pause_remaining"] = 0.0
+		worker["paused_route_index"] = -1
 		var direction := (route[1] - route[0]).normalized()
 		body.rotation.y = atan2(-direction.x, -direction.z)
 		body.velocity = Vector3.ZERO
 		body.collision_mask = 2
-		_set_worker_animation(worker, &"walk", direction)
+		_set_worker_animation(worker, &"idle" if worker["stationary"] else &"walk", direction)
 	for potion in potions:
 		potion.visible = true
 		potion.set_meta("collected", false)
 	status_label.text = ""
+	if floor_label:
+		floor_label.text = "FLOOR %d / %d  ·  %s" % [floor_number, LEVEL_COUNT, level_name]
 	resetting = false
 	_update_hidden_time_hud()
 	_snap_camera_to_player()
@@ -746,6 +862,10 @@ func _complete_level() -> void:
 
 
 func _build_world() -> void:
+	level_root = Node3D.new()
+	level_root.name = "Floor%02d" % floor_number
+	add_child(level_root)
+
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
@@ -754,38 +874,117 @@ func _build_world() -> void:
 	env.ambient_light_color = Color("#e5efff")
 	env.ambient_light_energy = 0.72
 	environment.environment = env
-	add_child(environment)
+	level_root.add_child(environment)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-58.0, -35.0, 0.0)
 	sun.light_color = Color("#fff4dc")
 	sun.light_energy = 1.15
 	sun.shadow_enabled = true
-	add_child(sun)
+	level_root.add_child(sun)
 
 	var ground := MeshInstance3D.new()
 	var ground_mesh := PlaneMesh.new()
 	ground_mesh.size = Vector2(WORLD_X_HALF * 2.08, WORLD_Z_HALF * 2.08)
 	ground.mesh = ground_mesh
 	ground.material_override = _material(Color("#59666b"), 0.96)
-	add_child(ground)
+	level_root.add_child(ground)
 
 	_add_room_flooring()
-	_add_room_partitions()
-	_add_office_furniture()
+	match floor_number:
+		1:
+			_add_first_level_layout()
+		2:
+			_add_second_level_layout()
+		_:
+			_add_room_partitions()
+			_add_office_furniture()
+	_add_outer_walls()
 	_add_exit()
 	_build_potions()
 
 
+func _add_first_level_layout() -> void:
+	# Four generous cover islands leave several forgiving routes through the
+	# opening floor while teaching how sight cones turn with a patrol.
+	_add_cubicle(Vector3(-6.0, 0.0, 3.5), true)
+	_add_cubicle(Vector3(5.0, 0.0, 3.5), true)
+	_add_cubicle(Vector3(-5.0, 0.0, -3.5), false)
+	_add_cubicle(Vector3(6.0, 0.0, -3.5), false)
+	_add_partition_tiles(Vector3(0.0, 0.0, 0.0), Vector2i(6, 1), 3, Color("#78909c"))
+	_add_plant(Vector3(-13.5, 0.0, -1.0))
+	_add_plant(Vector3(13.5, 0.0, 1.0))
+	_add_first_level_room_walls()
+
+
+func _add_second_level_layout() -> void:
+	# The stationary group faces into the conversation. Their cones cover the
+	# table-side space, so the intended route curls behind their backs.
+	_add_boardroom_table()
+	_add_cubicle(Vector3(-10.5, 0.0, 4.5), true)
+	_add_cubicle(Vector3(10.5, 0.0, -4.5), false)
+	_add_partition_tiles(Vector3(-12.0, 0.0, -2.5), Vector2i(1, 7), 3)
+	_add_partition_tiles(Vector3(12.0, 0.0, 2.5), Vector2i(1, 7), 3)
+	_add_plant(Vector3(-1.0, 0.0, 7.5))
+	_add_plant(Vector3(1.0, 0.0, -7.5))
+	_add_second_level_room_walls()
+
+
+func _add_first_level_room_walls() -> void:
+	# Doorways coincide with the two teaching patrols' boundary crossings. Extra
+	# openings keep several player routes available instead of turning the floor
+	# into one forced corridor.
+	_add_room_wall_along_z(0.0, 3.5, 10.0, [6.0, 8.0])
+	_add_room_wall_along_z(0.0, -3.5, 3.5, [-1.0, 1.0])
+	_add_room_wall_along_z(0.0, -10.0, -3.5, [-8.0, -6.0])
+	_add_room_wall_along_x(3.5, -15.0, 0.0, [-10.0, -1.0])
+	_add_room_wall_along_x(3.5, 0.0, 15.0, [4.0, 9.0])
+	_add_room_wall_along_x(-3.5, -15.0, 0.0, [-9.0, -4.0])
+	_add_room_wall_along_x(-3.5, 0.0, 15.0, [1.0, 10.0])
+
+
+func _add_second_level_room_walls() -> void:
+	# Keep the boardroom itself open across the centre line: the table and seated
+	# workers form its readable focal area. The surrounding rooms use real walls,
+	# with doorways at both legs of every north/south patrol.
+	_add_room_wall_along_z(0.0, 3.5, 10.0, [5.5, 8.0])
+	_add_room_wall_along_z(0.0, -10.0, -3.5, [-8.0, -5.5])
+	_add_room_wall_along_x(3.5, -15.0, 0.0, [-10.0, -6.5])
+	_add_room_wall_along_x(3.5, 0.0, 15.0, [6.5, 8.0])
+	_add_room_wall_along_x(-3.5, -15.0, 0.0, [-10.0, -6.5])
+	_add_room_wall_along_x(-3.5, 0.0, 15.0, [6.5, 8.0])
+
+
+func _add_boardroom_table() -> void:
+	var table := _add_static_prop(
+		Vector3.ZERO, BOARDROOM_TABLE_TILES, BOARDROOM_TABLE_TEXTURE
+	)
+	table.name = "BoardroomTable"
+	# People see one another across the tabletop while its complete base contact
+	# footprint still blocks the briefcase from cutting through the furniture.
+	var collision := table.get_child(0) as CollisionShape3D
+	var shape := collision.shape as BoxShape3D
+	shape.size.y = BOARDROOM_TABLE_COLLISION_HEIGHT
+	collision.position.y = BOARDROOM_TABLE_COLLISION_HEIGHT * 0.5
+	assert(BOARDROOM_TABLE_COLLISION_HEIGHT < VISION_RAY_MIN_HEIGHT)
+
+
+func _add_outer_walls() -> void:
+	_add_partition_tiles(Vector3(0.0, 0.0, -10.05), Vector2i(60, 1), 1, Color("#d7e0e8"))
+	_add_partition_tiles(Vector3(0.0, 0.0, 10.05), Vector2i(60, 1), 1, Color("#d7e0e8"))
+	_add_partition_tiles(Vector3(-15.05, 0.0, 0.0), Vector2i(1, 40), 1, Color("#d7e0e8"))
+	_add_partition_tiles(Vector3(15.05, 0.0, 0.0), Vector2i(1, 40), 1, Color("#d7e0e8"))
+
+
 func _add_room_flooring() -> void:
-	# Narrow gaps expose the neutral base floor as thresholds between six office
-	# rooms. The room partitions follow these same cubicle-aligned boundaries.
-	var room_width := 14.93
-	var outer_room_depth := 6.6
-	var middle_room_depth := 6.52
-	var left_x := -7.535
-	var right_x := 7.535
-	var outer_z := 6.7
+	# Floor finishes meet exactly. Room boundaries come from visible, collidable
+	# walls and deliberate doorways rather than neutral strips that resemble walls.
+	var room_width := 15.0
+	var outer_room_depth := 6.5
+	var middle_room_depth := 7.0
+	var left_x := -7.5
+	var right_x := 7.5
+	var outer_z := 6.75
 
 	# Repeated materials sit diagonally rather than sharing an edge.
 	_add_floor_zone(
@@ -841,7 +1040,7 @@ func _add_floor_zone(
 		size.x / texture_world_size, size.y / texture_world_size, 1.0
 	)
 	floor.material_override = floor_material
-	add_child(floor)
+	level_root.add_child(floor)
 
 
 func _add_room_partitions() -> void:
@@ -906,7 +1105,7 @@ func _add_low_room_wall(at: Vector3, size: Vector3) -> void:
 	body.set_meta("tile_height", 1)
 	body.collision_layer = 2
 	body.collision_mask = 0
-	add_child(body)
+	level_root.add_child(body)
 
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -970,12 +1169,6 @@ func _add_office_furniture() -> void:
 	)
 	_add_bathroom()
 
-	_add_partition_tiles(Vector3(0.0, 0.0, -10.05), Vector2i(60, 1), 1, Color("#d7e0e8"))
-	_add_partition_tiles(Vector3(0.0, 0.0, 10.05), Vector2i(60, 1), 1, Color("#d7e0e8"))
-	_add_partition_tiles(Vector3(-15.05, 0.0, 0.0), Vector2i(1, 40), 1, Color("#d7e0e8"))
-	_add_partition_tiles(Vector3(15.05, 0.0, 0.0), Vector2i(1, 40), 1, Color("#d7e0e8"))
-
-
 func _add_cubicle(at: Vector3, opens_positive_z: bool) -> void:
 	var opening_sign := 1.0 if opens_positive_z else -1.0
 	var back_z := at.z - opening_sign * 1.5
@@ -988,11 +1181,11 @@ func _add_cubicle(at: Vector3, opens_positive_z: bool) -> void:
 
 
 func _build_potions() -> void:
-	for potion_position in POTION_POSITIONS:
+	for potion_position in potion_positions:
 		var potion := Node3D.new()
 		potion.position = potion_position
 		potion.set_meta("collected", false)
-		add_child(potion)
+		level_root.add_child(potion)
 
 		var glow := MeshInstance3D.new()
 		var glow_mesh := CylinderMesh.new()
@@ -1050,7 +1243,7 @@ func _add_partition_tiles(
 	body.set_meta("tile_height", height_tiles)
 	body.collision_layer = 2
 	body.collision_mask = 0
-	add_child(body)
+	level_root.add_child(body)
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = size
@@ -1129,8 +1322,8 @@ func _add_bathroom() -> void:
 	# The bathroom gets washable vinyl over the room carpet. It sits slightly
 	# above the room flooring so the two planes do not flicker in the browser.
 	_add_floor_zone(
-		Vector3(-12.75, 0.0, -8.25),
-		Vector2(4.5, 3.5),
+		Vector3(-12.75, 0.0, -7.75),
+		Vector2(4.5, 4.5),
 		FLOOR_VINYL_CHARCOAL,
 		2.0,
 		0.014
@@ -1138,9 +1331,9 @@ func _add_bathroom() -> void:
 
 	# The outer level walls form the north and west edges. A centred east-side
 	# doorway opens into the aisle between the sink and three toilet stalls.
-	_add_partition_tiles(Vector3(-12.75, 0.0, -6.5), Vector2i(9, 1), 3, Color("#86a9ac"))
+	_add_partition_tiles(Vector3(-12.75, 0.0, -5.5), Vector2i(9, 1), 3, Color("#86a9ac"))
 	_add_partition_tiles(Vector3(-10.5, 0.0, -9.5), Vector2i(1, 2), 3, Color("#86a9ac"))
-	_add_partition_tiles(Vector3(-10.5, 0.0, -7.0), Vector2i(1, 2), 3, Color("#86a9ac"))
+	_add_partition_tiles(Vector3(-10.5, 0.0, -6.5), Vector2i(1, 4), 3, Color("#86a9ac"))
 
 	# Keep the vanity parallel to, and just clear of, the north perimeter wall.
 	_add_oriented_static_prop(
@@ -1153,11 +1346,11 @@ func _add_bathroom() -> void:
 
 	# Full-depth side panels separate the three stalls; their open fronts face
 	# the aisle so each fixture and the nearby potion remain readable.
-	_add_partition_tiles(Vector3(-13.5, 0.0, -7.25), Vector2i(1, 3), 3, Color("#9ab9bb"))
-	_add_partition_tiles(Vector3(-12.0, 0.0, -7.25), Vector2i(1, 3), 3, Color("#9ab9bb"))
+	_add_partition_tiles(Vector3(-13.5, 0.0, -6.75), Vector2i(1, 5), 3, Color("#9ab9bb"))
+	_add_partition_tiles(Vector3(-12.0, 0.0, -6.75), Vector2i(1, 5), 3, Color("#9ab9bb"))
 	for toilet_x in [-14.25, -12.75, -11.25]:
 		_add_oriented_static_prop(
-			Vector3(toilet_x, 0.0, -7.1),
+			Vector3(toilet_x, 0.0, -6.1),
 			BATHROOM_TOILET_TILES,
 			BATHROOM_TOILET_TEXTURE,
 			"bathroom-toilet",
@@ -1185,7 +1378,7 @@ func _add_static_prop(
 	body.set_meta("footprint_rotated", rotate_footprint)
 	body.collision_layer = 2
 	body.collision_mask = 0
-	add_child(body)
+	level_root.add_child(body)
 
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -1285,14 +1478,14 @@ func _projected_prop_size(size_tiles: Vector3i) -> Vector2:
 
 
 func _add_exit() -> void:
-	_add_floor_marker(EXIT_POSITION, Color(0.2, 1.0, 0.48, 0.48))
-	_add_exit_sign(EXIT_POSITION)
+	_add_floor_marker(exit_position, Color(0.2, 1.0, 0.48, 0.48))
+	_add_exit_sign(exit_position)
 
 
 func _add_exit_sign(at: Vector3) -> void:
 	var exit_post := Node3D.new()
 	exit_post.position = at + Vector3(0.0, 0.0, -0.35)
-	add_child(exit_post)
+	level_root.add_child(exit_post)
 	_add_prop_sprite(
 		exit_post, EXIT_SIGN_TEXTURE, Vector3(0.0, 0.82, 0.0), Vector2(1.8, 1.65)
 	)
@@ -1308,7 +1501,7 @@ func _add_floor_marker(at: Vector3, color: Color) -> void:
 	outline.mesh = outline_mesh
 	outline.position = at + Vector3(0.0, 0.015, 0.0)
 	outline.material_override = _material(PROP_INK, 1.0)
-	add_child(outline)
+	level_root.add_child(outline)
 	var marker := MeshInstance3D.new()
 	var marker_mesh := CylinderMesh.new()
 	marker_mesh.top_radius = 0.72
@@ -1318,13 +1511,13 @@ func _add_floor_marker(at: Vector3, color: Color) -> void:
 	marker.mesh = marker_mesh
 	marker.position = at + Vector3(0.0, 0.02, 0.0)
 	marker.material_override = _material(color, 1.0)
-	add_child(marker)
+	level_root.add_child(marker)
 
 
 func _build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Briefcase"
-	player.position = START_POSITION
+	player.position = start_position
 	player.collision_layer = 1
 	player.collision_mask = 3
 	add_child(player)
@@ -1438,10 +1631,19 @@ func _build_workers() -> void:
 	_validate_worker_room_coverage()
 	for i in worker_routes.size():
 		_add_worker(worker_routes[i], WORKER_ATLASES[i])
+	for i in stationary_worker_specs.size():
+		var spec := stationary_worker_specs[i]
+		var at: Vector3 = spec["position"]
+		var facing: Vector3 = spec["facing"]
+		_add_worker(
+			PackedVector3Array([at, at + facing]),
+			WORKER_ATLASES[worker_routes.size() + i],
+			true
+		)
 
 
 func _validate_worker_room_coverage() -> void:
-	assert(worker_routes.size() == WORKER_ATLASES.size())
+	assert(worker_routes.size() + stationary_worker_specs.size() <= WORKER_ATLASES.size())
 	var staffed_rooms := {}
 	for route in worker_routes:
 		assert(route.size() >= 2)
@@ -1456,8 +1658,10 @@ func _validate_worker_room_coverage() -> void:
 			)
 			route_length += segment.length()
 			staffed_rooms[_room_for_position(point)] = true
-		assert(route_length >= 20.0, "Worker patrol routes must use long loops.")
-	assert(staffed_rooms.size() == 6, "Worker patrols must visit every office room.")
+		assert(route_length >= 20.0, "Worker patrol routes must use readable loops.")
+	if floor_number == 3:
+		assert(worker_routes.size() == WORKER_ATLASES.size())
+		assert(staffed_rooms.size() == 6, "Level 3 patrols must visit every office room.")
 
 
 func _room_for_position(position: Vector3) -> Vector2i:
@@ -1470,12 +1674,12 @@ func _room_for_position(position: Vector3) -> Vector2i:
 	return Vector2i(column, row)
 
 
-func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
+func _add_worker(route: PackedVector3Array, atlas: Texture2D, stationary := false) -> void:
 	var body := CharacterBody3D.new()
 	body.position = route[0]
 	body.collision_layer = 1
 	body.collision_mask = 2
-	add_child(body)
+	level_root.add_child(body)
 
 	var collision := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
@@ -1499,6 +1703,8 @@ func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
 
 	var cone := _create_vision_cone()
 	body.add_child(cone)
+	if stationary:
+		_add_conversation_bubble(body)
 	var direction := (route[1] - route[0]).normalized()
 	body.rotation.y = atan2(-direction.x, -direction.z)
 	var worker := {
@@ -1510,13 +1716,29 @@ func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
 		"sprite": sprite,
 		"facing": _worker_direction_name(direction),
 		"state": &"walk",
+		"stationary": stationary,
 		"returning": false,
 		"return_route": PackedVector3Array(),
 		"return_route_index": 0,
 		"resume_index": 1,
+		"turn_pause_remaining": 0.0,
+		"paused_route_index": -1,
 	}
 	workers.append(worker)
-	_set_worker_animation(worker, &"walk", direction)
+	_set_worker_animation(worker, &"idle" if stationary else &"walk", direction)
+
+
+func _add_conversation_bubble(body: CharacterBody3D) -> void:
+	var bubble := Label3D.new()
+	bubble.text = "…"
+	bubble.position = Vector3(0.0, 1.75, 0.0)
+	bubble.font_size = 42
+	bubble.pixel_size = 0.009
+	bubble.modulate = Color("#26344a")
+	bubble.outline_modulate = Color("#f6eddc")
+	bubble.outline_size = 10
+	bubble.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	body.add_child(bubble)
 
 
 func _set_worker_animation(worker: Dictionary, state: StringName, direction := Vector3.ZERO) -> void:
@@ -1553,7 +1775,7 @@ func _create_vision_cone() -> MeshInstance3D:
 func _update_vision_cone(worker: Dictionary) -> void:
 	var body: CharacterBody3D = worker["body"]
 	var cone: MeshInstance3D = worker["cone"]
-	var origin := body.global_position + Vector3(0.0, 0.45, 0.0)
+	var origin := body.global_position + Vector3(0.0, VISION_RAY_MIN_HEIGHT, 0.0)
 	var distances := PackedFloat32Array()
 	distances.resize(VISION_RAY_COUNT)
 
@@ -1646,6 +1868,16 @@ func _build_hud() -> void:
 	add_child(pause_controller)
 	result_screen = ResultScreen.new()
 	add_child(result_screen)
+
+	floor_label = Label.new()
+	floor_label.position = Vector2(22.0, 22.0)
+	floor_label.size = Vector2(360.0, 34.0)
+	floor_label.text = "FLOOR %d / %d  ·  %s" % [floor_number, LEVEL_COUNT, level_name]
+	floor_label.add_theme_font_size_override("font_size", 17)
+	floor_label.add_theme_color_override("font_color", Color("#e8f0ec"))
+	floor_label.add_theme_color_override("font_outline_color", Color("#18262e"))
+	floor_label.add_theme_constant_override("outline_size", 7)
+	gameplay_hud.add_child(floor_label)
 
 	var disguise_panel := PanelContainer.new()
 	disguise_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -1790,11 +2022,31 @@ func _continue_from_result() -> void:
 	var advancing := level_complete
 	result_screen.hide_report()
 	if advancing:
-		floor_number += 1
+		floor_number = floor_number % LEVEL_COUNT + 1
 	level_complete = false
-	_reset_level()
+	if advancing:
+		_rebuild_level()
+	else:
+		_reset_level()
 	_play_sfx(SFX_GAME_START)
 	_begin_opening_animation()
+
+
+func _rebuild_level() -> void:
+	if is_instance_valid(level_root):
+		level_root.free()
+	workers.clear()
+	potions.clear()
+	cubicle_drop_points.clear()
+	_configure_level(floor_number)
+	_build_world()
+	_build_workers()
+	_reset_level()
+
+
+func load_level_for_gallery(level_number: int) -> void:
+	floor_number = clampi(level_number, 1, LEVEL_COUNT)
+	_rebuild_level()
 
 
 func _begin_opening_animation() -> void:

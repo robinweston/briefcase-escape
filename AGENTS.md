@@ -94,6 +94,48 @@ Tile placement, adjacency, and row spacing are determined only by a prop's base 
 
 Dividers declare an integer `Vector2i(width, depth)` tile footprint and integer tile height. Their visible and collision wall may remain a thin inset within the occupied tile row, but their span must be a whole number of tiles. Place new static assets on the same half-unit grid and do not add independent hand-tuned sprite sizes or collision dimensions.
 
+## Level design review
+
+Review every new or changed level as a complete stealth route, not only as a collection of correctly placed assets. Start with its whole-level snapshot and then play it in the browser with sound muted. A level is not ready merely because it loads without errors.
+
+### Layout and access
+
+- Confirm there is a connected, player-width route from the start to the exit and that all intended rooms, cubicles, bathroom stalls, collectibles, cover positions, and worker drop points are reachable. Check actual collision clearance, not just visible gaps in the snapshot.
+- Inspect every doorway and cubicle opening. Entrances must face an accessible aisle rather than an outer wall, divider, desk, or another prop. Walk into each enclosed space from gameplay.
+- Preserve more than one useful stealth choice where the design allows it. Avoid a single unavoidable choke point covered continuously by overlapping sight cones.
+- Keep the start safe and readable. Early patrols should give the player time to understand the room and should move away from the spawn rather than trapping it in a short loop. Keep the exit visible, reachable, and free from accidental geometry or permanent cone coverage.
+- Keep corridors wide enough for the briefcase, turning workers, carried movement, and camera readability. Validate worker pickup, drop-off, and return routes against walls and furniture as well as ordinary patrol routes.
+- Place collectibles on traversable ground within pickup range. They must remain fully visible, must not overlap props or walls, and should reward a deliberate route rather than require collision exploits.
+- In every whole-level snapshot, inspect the complete potion sprite and pickup clearance, not only its centre point. Keep both outside partition footprints and projected partition artwork so the collectible never appears embedded in a wall.
+
+### Static scenery and room composition
+
+- Put wall furniture flush against the wall when it is already intended to be wall-adjacent. Printers, vending machines, sinks, filing cabinets, and similar functional fronts must face into the room or aisle. Do not leave small unexplained gaps or place their usable face against a wall.
+- Use each prop's declared base footprint for placement and clearance. Check that its sprite, footprint, and collision agree, that tall artwork does not overlap walls unnaturally, and that transparent padding has not shifted its apparent position.
+- Group repeated furniture intentionally. Filing-cabinet banks should share a wall and use the approved depth stride and render order so foreground bodies overlap the cabinets behind and only their top edges remain readable. Do not fix sprite overlap by adding layout gaps.
+- Make each room's purpose legible while preserving paths and cover. Distribute clutter rather than concentrating it in one room, and inspect foreground props for hidden routes, workers, collectibles, or vision cones.
+- Keep boundary areas readable through the gameplay camera. Near the north edge in particular, leave enough projected space for tall scenery and the HUD so the player, walls, exits, and threats are not obscured.
+- Floor-material transitions must meet cleanly on one plane. Do not expose narrow strips of the base floor or add raised trim to separate floor textures; if rooms need a physical boundary, use an actual collision wall with intentional, player-width doorways.
+- Decide separately whether each prop blocks movement and sight. Low furniture such as a boardroom table may block movement while allowing eye-level detection and the rendered vision cone to pass over it; test both behaviours from every relevant worker position.
+
+### Workers, patrols, and difficulty
+
+- Plot every complete patrol in the whole-level snapshot, including the closing segment from the last waypoint to the first. Routes must avoid static collision, give workers enough room to turn, and keep their visible facing and sight cone aligned with their real movement and detection.
+- Check each complete patrol leg as a swept worker-width path, not a zero-width line between waypoints. No leg, endpoint, or closing segment may touch or cross a wall, partition, furniture collision footprint, or doorway jamb; confirm the route by observing a full loop in gameplay.
+- Space patrols across rooms and time so workers do not form an accidental cluster or repeatedly cover the same corridor in sync. Overlap should create an intentional timing puzzle, not an unavoidable wall of vision.
+- Avoid tiny back-and-forth routes and repeated immediate 180-degree turns. Prefer longer loops, multi-room routes, and paths with varied shapes. Where a U-turn is intentional, give the worker a readable pause before turning.
+- Use a range of worker roles across a level: long cross-room patrols, local loops or circling workers, and occasional stationary workers facing a deliberate direction. Stationary groups, such as people talking around a boardroom table, should create clear safe lanes behind their backs rather than omnidirectional coverage.
+- Vary route length, direction, phase, worker appearance, and area of responsibility. Do not add difficulty only by adding more workers; combine patrol patterns, cover, route choice, and recovery opportunities.
+- Check difficulty from the player's route rather than by worker count alone. Each level should introduce or combine ideas deliberately, later levels should increase complexity, and recovery resources should be spaced in proportion to risk.
+
+### Review procedure
+
+1. Regenerate the whole-level snapshot after any layout, patrol, start, exit, collectible, or drop-point change with `./capture-level-map.sh`. When multiple levels exist, inspect a snapshot for every level rather than assuming one representative floor is sufficient.
+2. In the snapshot, trace start-to-exit connectivity, room and cubicle entrances, floor seams, prop-wall alignment, collectible sprite and pickup clearance, complete worker-width patrol loops, route overlap, cover, and camera-edge clearance.
+3. Run each level headlessly with audio disabled and check for runtime errors and collision-route validation failures.
+4. Play each level in the served Web build. Walk every room and both keyboard schemes; test ordinary movement, disguise routes, being caught and carried, every drop point, collectibles, the exit, and retry or progression flow.
+5. Inspect the browser console and visually check sprite grounding, directional assets, sight-cone clipping, worker turns, foreground occlusion, HUD clearance, and start and exit framing before accepting the level.
+
 ## Input-map warning
 
 Keep the input actions named `move_left`, `move_right`, `move_up`, `move_down`, `toggle_disguise`, and `toggle_pause`.

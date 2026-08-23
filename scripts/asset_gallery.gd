@@ -15,6 +15,7 @@ const SCENERY_TEXTURES := [
 	preload("res://assets/scenery/generated/vending-machine.png"),
 	preload("res://assets/scenery/generated/bathroom-sinks.png"),
 	preload("res://assets/scenery/generated/bathroom-toilet.png"),
+	preload("res://assets/scenery/generated/boardroom-table.png"),
 ]
 const SCENERY_NAMES := [
 	"Workstation",
@@ -27,6 +28,7 @@ const SCENERY_NAMES := [
 	"Vending Machine",
 	"Bathroom Sinks",
 	"Bathroom Toilet",
+	"Boardroom Table",
 ]
 const DIRECTIONAL_SCENERY_ASSETS := {
 	0: "workstation",
@@ -112,6 +114,7 @@ var briefcase_state_index := 1
 var briefcase_direction_index := 0
 var briefcase_paused := false
 var gallery_tabs: TabContainer
+var level_map_tabs: TabContainer
 var music_player: AudioStreamPlayer
 var office_player: AudioStreamPlayer
 var audio_status: Label
@@ -160,6 +163,15 @@ func _capture_level_map() -> void:
 		if gallery_tabs.get_tab_control(tab_index).name == &"Level Map":
 			gallery_tabs.current_tab = tab_index
 			break
+	if level_map_tabs:
+		for argument in OS.get_cmdline_user_args():
+			if argument.begins_with("--start-level="):
+				level_map_tabs.current_tab = clampi(
+					int(argument.trim_prefix("--start-level=")) - 1,
+					0,
+					level_map_tabs.get_tab_count() - 1
+				)
+				break
 
 	# Wait for both the gallery and its embedded 3D viewport to finish drawing.
 	await RenderingServer.frame_post_draw
@@ -547,13 +559,26 @@ func _gallery_directional_prop_textures(index: int) -> Array[Texture2D]:
 
 
 func _build_level_map_page(page: Control) -> void:
+	level_map_tabs = TabContainer.new()
+	level_map_tabs.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	level_map_tabs.add_theme_font_size_override("font_size", 18)
+	page.add_child(level_map_tabs)
+	var level_names := ["FIRST STEPS", "BOARDROOM BUZZ", "THE FULL OFFICE"]
+	for level_number in range(1, 4):
+		var level_page := Control.new()
+		level_page.name = "LEVEL %d  ·  %s" % [level_number, level_names[level_number - 1]]
+		level_map_tabs.add_child(level_page)
+		_build_single_level_map_page(level_page, level_number)
+
+
+func _build_single_level_map_page(page: Control, level_number: int) -> void:
 	var page_background := ColorRect.new()
 	page_background.color = Color("#f3eadc")
 	page_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	page.add_child(page_background)
 
 	var intro := Label.new()
-	intro.text = "WHOLE-OFFICE SNAPSHOT  ·  live layout from the gameplay scene"
+	intro.text = "WHOLE-FLOOR SNAPSHOT  ·  live layout from the gameplay scene"
 	intro.position = Vector2(16.0, 10.0)
 	intro.add_theme_font_size_override("font_size", 20)
 	intro.add_theme_color_override("font_color", Color("#5f5356"))
@@ -578,6 +603,7 @@ func _build_level_map_page(page: Control) -> void:
 
 	var level := MAIN_SCENE.instantiate()
 	map_viewport.add_child(level)
+	level.call("load_level_for_gallery", level_number)
 	for child in level.get_children():
 		if child is CanvasLayer:
 			child.visible = false
@@ -624,7 +650,7 @@ func _build_level_map_page(page: Control) -> void:
 	legend_title.add_theme_font_size_override("font_size", 22)
 	legend_title.add_theme_color_override("font_color", Color("#322a2b"))
 	legend.add_child(legend_title)
-	for index in WORKER_NAMES.size():
+	for index in routes_value.size():
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		legend.add_child(row)
@@ -637,6 +663,15 @@ func _build_level_map_page(page: Control) -> void:
 		route_label.add_theme_font_size_override("font_size", 17)
 		route_label.add_theme_color_override("font_color", Color("#453c3e"))
 		row.add_child(route_label)
+
+	var stationary_count: int = workers_value.size() - routes_value.size()
+	if stationary_count > 0:
+		var stationary_label := Label.new()
+		stationary_label.text = "+ %d stationary coworkers" % stationary_count
+		stationary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		stationary_label.add_theme_font_size_override("font_size", 16)
+		stationary_label.add_theme_color_override("font_color", Color("#453c3e"))
+		legend.add_child(stationary_label)
 
 	var note := Label.new()
 	note.text = "Routes are drawn over the real office geometry. Coloured dots mark turning points; every path closes into a loop."
