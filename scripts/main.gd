@@ -251,8 +251,8 @@ func _configure_level(level: int) -> void:
 			stationary_worker_specs.assign([
 				{"position": Vector3(-2.0, 0.0, -2.7), "facing": Vector3.BACK},
 				{"position": Vector3(2.0, 0.0, -2.7), "facing": Vector3.BACK},
-				{"position": Vector3(-2.0, 0.0, 2.7), "facing": Vector3.FORWARD},
-				{"position": Vector3(2.0, 0.0, 2.7), "facing": Vector3.FORWARD},
+				{"position": Vector3(-2.0, 0.0, 2.35), "facing": Vector3.FORWARD},
+				{"position": Vector3(2.0, 0.0, 2.35), "facing": Vector3.FORWARD},
 				{"position": Vector3(-4.7, 0.0, 0.0), "facing": Vector3.RIGHT},
 				{"position": Vector3(4.7, 0.0, 0.0), "facing": Vector3.LEFT},
 			])
@@ -1701,7 +1701,7 @@ func _add_worker(route: PackedVector3Array, atlas: Texture2D, stationary := fals
 	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	body.add_child(sprite)
 
-	var cone := _create_vision_cone()
+	var cone := _create_vision_cone(stationary)
 	body.add_child(cone)
 	if stationary:
 		_add_conversation_bubble(body)
@@ -1757,13 +1757,18 @@ func _worker_direction_name(direction: Vector3) -> StringName:
 	return &"s" if direction.z > 0.0 else &"n"
 
 
-func _create_vision_cone() -> MeshInstance3D:
+func _create_vision_cone(draw_over_low_furniture := false) -> MeshInstance3D:
 	var cone := MeshInstance3D.new()
 	cone.mesh = ArrayMesh.new()
 	cone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var cone_material := _material(Color(1.0, 0.78, 0.18, 0.27), 1.0)
 	cone_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	cone_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# The boardroom table is below eye level and does not block detection. Keep
+	# the stationary group's matching cones readable across its illustrated top.
+	cone_material.no_depth_test = draw_over_low_furniture
+	if draw_over_low_furniture:
+		cone_material.render_priority = 1
 	cone.material_override = cone_material
 	var distances := PackedFloat32Array()
 	distances.resize(VISION_RAY_COUNT)
