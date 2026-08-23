@@ -113,6 +113,7 @@ GitHub has issued the certificate.
 - `scripts/main.gd` builds the top-down world, player, people, camera, and UI.
 - `scripts/title_screen.gd` builds the title, static chase banner, objective, and controls screen.
 - `assets/title_banner.png` is the generated all-in-one title and office-chase artwork.
+- `assets/web/` contains the source app icon and social share card used by the Web export.
 - `assets/fonts/` contains the OFL-licensed Oswald and IBM Plex Mono title-screen fonts.
 - `assets/briefcase_walk.svg` is the four-direction idle/walk atlas used by the player.
 - `assets/briefcase_hidden.svg` is the matching ordinary-case disguise artwork.
