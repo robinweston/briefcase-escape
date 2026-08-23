@@ -21,7 +21,7 @@ const START_POSITION := Vector3(-13.5, 0.0, 8.3)
 const EXIT_POSITION := Vector3(13.5, 0.0, -8.3)
 const CAMERA_OFFSET := Vector3(0.0, 12.0, 10.0)
 const CAMERA_FOCUS_X_LIMIT := 3.9
-const CAMERA_FOCUS_MIN_Z := -3.5
+const CAMERA_FOCUS_MIN_Z := -5.5
 const CAMERA_FOCUS_MAX_Z := 1.85
 const WorkerFrames = preload("res://scripts/worker_sprite_frames.gd")
 const TitleScreen = preload("res://scripts/title_screen.gd")
@@ -1633,7 +1633,7 @@ func _camera_focus() -> Vector3:
 	# Keep the camera near the floor bounds while allowing the briefcase to move
 	# toward the edge of the viewport at the start and exit. The pitched view
 	# needs extra travel toward negative Z so the tops of north-wall scenery stay
-	# on screen instead of being clipped above the floor's visible boundary.
+	# below the top HUD instead of being clipped or covered there.
 	focus.x = clampf(focus.x, -CAMERA_FOCUS_X_LIMIT, CAMERA_FOCUS_X_LIMIT)
 	focus.z = clampf(focus.z, CAMERA_FOCUS_MIN_Z, CAMERA_FOCUS_MAX_Z)
 	return focus
