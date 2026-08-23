@@ -56,6 +56,30 @@ func _build_screen() -> void:
 	content.add_child(illustration)
 	_build_chase_illustration(illustration)
 	_build_mission_file(content)
+	_build_commit_indicator()
+
+
+func _build_commit_indicator() -> void:
+	var indicator := _make_mono_label("BUILD %s" % _get_build_commit(), 10, Color("#6d7b94"), true)
+	indicator.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	indicator.offset_left = 12.0
+	indicator.offset_top = -24.0
+	indicator.offset_right = 160.0
+	indicator.offset_bottom = -8.0
+	indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(indicator)
+
+
+func _get_build_commit() -> String:
+	if not OS.has_feature("web"):
+		return "DEV"
+	var commit: Variant = JavaScriptBridge.eval(
+		"window.BRIEFCASE_BUILD_COMMIT || 'UNKNOWN'",
+		true,
+	)
+	if commit is String and not commit.is_empty():
+		return commit
+	return "UNKNOWN"
 
 
 func _build_chase_illustration(parent: Control) -> void:
