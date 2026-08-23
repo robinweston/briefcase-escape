@@ -26,7 +26,7 @@ export_game() {
   godot --headless --path "${game_dir}" \
     --export-release Web "${game_dir}/build/web/index.html"
   "${game_dir}/tools/inject_web_build_commit.sh" "${game_dir}/build/web/index.html"
-  cp "${game_dir}/assets/web/social-card.png" "${game_dir}/build/web/social-card.png"
+  cp "${game_dir}/assets/web/social-card.jpg" "${game_dir}/build/web/social-card.jpg"
 }
 
 cleanup() {

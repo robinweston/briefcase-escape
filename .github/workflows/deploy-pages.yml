@@ -33,7 +33,7 @@ jobs:
           mkdir -p build/web
           godot --headless --path . --export-release Web build/web/index.html
           ./tools/inject_web_build_commit.sh build/web/index.html
-          cp assets/web/social-card.png build/web/social-card.png
+          cp assets/web/social-card.jpg build/web/social-card.jpg
           touch build/web/.nojekyll
 
       - name: Configure GitHub Pages
