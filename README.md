@@ -4,9 +4,9 @@ A top-down stealth game built with Godot 4. Guide a briefcase through a scrollin
 
 Move in four cardinal directions with `WASD` or the arrow keys. Paired directional input resolves to a single axis, so there is no diagonal movement.
 
-Office workers also move only in the four cardinal directions while patrolling, approaching, and carrying the briefcase.
+Office workers also move only in the four cardinal directions while patrolling, approaching, and carrying the briefcase. A worker's vision cone and detection switch off while they put a disguised briefcase away and return to their patrol route.
 
-You begin as an ordinary briefcase. After one second, it automatically comes to life; gameplay controls are ignored until that transformation finishes. Movement is always disabled while disguised. The opening disguise does not consume disguise time; later disguises spend it. Workers carry a disguised briefcase to the nearest cubicle instead of catching it. Disguise time starts at five seconds and only recharges by collecting the scattered potion bottles; each bottle restores one second, up to the five-second maximum. The timer pauses while a worker is carrying the briefcase, and `Space` transforms back early after it is put down.
+You begin as an ordinary briefcase. After one second, it automatically comes to life; gameplay controls are ignored until that transformation finishes. Movement is always disabled while disguised. The opening disguise does not consume disguise time; later disguises spend it. Workers carry a disguised briefcase to the nearest cubicle instead of catching it. Disguise time starts at five seconds and only recharges by collecting the scattered potion bottles; each bottle restores one second, up to the five-second maximum. Once spotted in disguise, the timer pauses and movement and transformation controls remain locked until the worker puts the briefcase down. The disguise is free for three seconds after the drop, but `Space` can transform back immediately.
 
 Press `P` to pause or resume the game.
 

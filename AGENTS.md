@@ -12,9 +12,12 @@ The goal is to travel from the start of the office to the exit. Being seen plays
 - Movement is limited to four screen-aligned cardinal directions; diagonal input resolves to one axis.
 - Press `Space` to toggle the temporary disguise.
 - The level starts in a free disguise, ignores controls for one second, then automatically animates the briefcase to life; later disguises consume disguise time.
+- Once spotted in disguise, disguise time pauses and movement and disguise toggling stay locked until the worker puts the briefcase down.
+- A dropped briefcase receives three seconds of free disguise time and may leave disguise immediately.
 - Collectibles replenish disguise time.
 - Press `P` to pause or resume.
 - Workers patrol fixed routes, face their movement direction, react to the player, and collide with office geometry.
+- A worker's vision cone and detection are disabled while putting the briefcase away and returning to their patrol route.
 - Visible vision cones match the real detection angle and range and are clipped by sight-blocking geometry.
 - Office furniture and walls provide movement obstacles, cover, and readable stealth routes.
 - Reaching the exit opens a cleared Escape Report and waits for Start before continuing.

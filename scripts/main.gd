@@ -20,6 +20,9 @@ const VISION_RAY_COUNT := 17
 const START_POSITION := Vector3(-13.5, 0.0, 8.3)
 const EXIT_POSITION := Vector3(13.5, 0.0, -8.3)
 const CAMERA_OFFSET := Vector3(0.0, 12.0, 10.0)
+const CAMERA_FOCUS_X_LIMIT := 3.9
+const CAMERA_FOCUS_MIN_Z := -3.5
+const CAMERA_FOCUS_MAX_Z := 1.85
 const WorkerFrames = preload("res://scripts/worker_sprite_frames.gd")
 const TitleScreen = preload("res://scripts/title_screen.gd")
 const PauseController = preload("res://scripts/pause_controller.gd")
@@ -68,6 +71,7 @@ const BRIEFCASE_SPRITE_PIXEL_SIZE := 0.0041
 const BRIEFCASE_WALK_FPS := 9.0
 const HIDDEN_TIME_MAX := 5.0
 const POTION_REFILL := 1.0
+const DROP_DISGUISE_GRACE_TIME := 3.0
 const CARRY_SPEED := 2.7
 const WORKER_PATH_RADIUS := 0.36
 const CARRIED_BRIEFCASE_HEIGHT := 0.62
@@ -171,6 +175,7 @@ var carry_route_index := 0
 var excursion_route := PackedVector3Array()
 var interrupted_patrol_index := 0
 var pickup_cooldown := 0.0
+var drop_disguise_grace_time := 0.0
 var transformation_tween: Tween
 var gameplay_hud: CanvasLayer
 var title_screen: CanvasLayer
@@ -213,7 +218,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("toggle_disguise") and not resetting and not level_complete:
-		if carrying_worker.is_empty() and not is_transforming:
+		if pickup_worker.is_empty() and carrying_worker.is_empty() and not is_transforming:
 			_set_hidden_mode(not hidden_mode)
 
 
@@ -228,6 +233,10 @@ func _physics_process(delta: float) -> void:
 		return
 
 	pickup_cooldown = maxf(0.0, pickup_cooldown - delta)
+	var had_drop_disguise_grace := drop_disguise_grace_time > 0.0
+	drop_disguise_grace_time = maxf(0.0, drop_disguise_grace_time - delta)
+	if had_drop_disguise_grace and drop_disguise_grace_time <= 0.0:
+		_update_hidden_time_hud()
 	_update_workers(delta)
 	if carrying_worker.is_empty() and pickup_worker.is_empty() and not hidden_mode:
 		_update_player()
@@ -242,8 +251,6 @@ func _physics_process(delta: float) -> void:
 	if not pickup_worker.is_empty():
 		if not hidden_mode:
 			_caught(pickup_worker)
-		elif not starting_disguise:
-			_drain_hidden_time(delta)
 		return
 
 	var seeing_worker := _worker_that_sees_player()
@@ -254,7 +261,7 @@ func _physics_process(delta: float) -> void:
 			_caught(seeing_worker)
 		return
 
-	if hidden_mode and not starting_disguise:
+	if hidden_mode and not starting_disguise and drop_disguise_grace_time <= 0.0:
 		_drain_hidden_time(delta)
 
 	if player.global_position.distance_to(EXIT_POSITION) < 0.8:
@@ -533,7 +540,7 @@ func _position_carried_player(worker: Dictionary) -> void:
 func _worker_that_sees_player() -> Dictionary:
 	for worker in workers:
 		var body: CharacterBody3D = worker["body"]
-		if worker["returning"]:
+		if not worker["vision_enabled"]:
 			continue
 		var origin := body.global_position + Vector3(0.0, 0.52, 0.0)
 		var target := player.global_position + Vector3(0.0, 0.45, 0.0)
@@ -563,6 +570,8 @@ func _begin_carry(worker: Dictionary) -> void:
 		return
 	_play_sfx(SFX_WORKER_ALERT)
 	pickup_worker = worker
+	_set_worker_vision_enabled(worker, false)
+	_update_hidden_time_hud()
 	interrupted_patrol_index = worker["index"]
 	excursion_route.clear()
 	excursion_route.append(body.position)
@@ -617,6 +626,8 @@ func _finish_carry(worker: Dictionary) -> void:
 	pickup_route.clear()
 	carry_route.clear()
 	pickup_cooldown = 1.0
+	drop_disguise_grace_time = DROP_DISGUISE_GRACE_TIME
+	_update_hidden_time_hud()
 	status_label.text = ""
 
 
@@ -631,6 +642,13 @@ func _finish_return(worker: Dictionary) -> void:
 	worker["returning"] = false
 	worker["return_route"] = PackedVector3Array()
 	worker["return_route_index"] = 0
+	_set_worker_vision_enabled(worker, true)
+
+
+func _set_worker_vision_enabled(worker: Dictionary, enabled: bool) -> void:
+	worker["vision_enabled"] = enabled
+	var cone: MeshInstance3D = worker["cone"]
+	cone.visible = enabled
 
 
 func _nearest_reachable_cubicle_drop(worker_position: Vector3, from: Vector3) -> Dictionary:
@@ -682,6 +700,7 @@ func _reset_level() -> void:
 	carry_route.clear()
 	excursion_route.clear()
 	pickup_cooldown = 0.0
+	drop_disguise_grace_time = 0.0
 	player.position = START_POSITION
 	player.velocity = Vector3.ZERO
 	player_collision.disabled = false
@@ -699,6 +718,7 @@ func _reset_level() -> void:
 		body.position = route[0]
 		worker["index"] = 1
 		worker["returning"] = false
+		_set_worker_vision_enabled(worker, true)
 		worker["return_route"] = PackedVector3Array()
 		worker["return_route_index"] = 0
 		var direction := (route[1] - route[0]).normalized()
@@ -1486,6 +1506,7 @@ func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
 		"route": route,
 		"index": 1,
 		"cone": cone,
+		"vision_enabled": true,
 		"sprite": sprite,
 		"facing": _worker_direction_name(direction),
 		"state": &"walk",
@@ -1609,10 +1630,12 @@ func _camera_focus() -> Vector3:
 	# Carrying raises the briefcase visually, but the camera should continue to
 	# track its floor position so pickup and drop-off do not bump the view.
 	focus.y = 0.0
-	# Keep the camera inside the floor near the outer walls while allowing the
-	# briefcase to move toward the edge of the viewport at the start and exit.
-	focus.x = clampf(focus.x, -3.9, 3.9)
-	focus.z = clampf(focus.z, -1.85, 1.85)
+	# Keep the camera near the floor bounds while allowing the briefcase to move
+	# toward the edge of the viewport at the start and exit. The pitched view
+	# needs extra travel toward negative Z so the tops of north-wall scenery stay
+	# on screen instead of being clipped above the floor's visible boundary.
+	focus.x = clampf(focus.x, -CAMERA_FOCUS_X_LIMIT, CAMERA_FOCUS_X_LIMIT)
+	focus.z = clampf(focus.z, CAMERA_FOCUS_MIN_Z, CAMERA_FOCUS_MAX_Z)
 	return focus
 
 
@@ -1807,7 +1830,12 @@ func _update_hidden_time_hud() -> void:
 		hidden_time_bar_background.bg_color = Color("#26343c")
 		hidden_time_bar_fill.bg_color = Color("#596870")
 	elif hidden_mode:
-		hidden_time_label.text = "DISGUISE ACTIVE"
+		if not pickup_worker.is_empty() or not carrying_worker.is_empty():
+			hidden_time_label.text = "DISGUISE PAUSED"
+		elif drop_disguise_grace_time > 0.0:
+			hidden_time_label.text = "DISGUISE FREE"
+		else:
+			hidden_time_label.text = "DISGUISE ACTIVE"
 		hidden_time_label.add_theme_color_override("font_color", Color("#f6d885"))
 		hidden_time_seconds_label.add_theme_color_override("font_color", Color("#f7f0dc"))
 		disguise_panel_style.border_color = Color("#f0c76b")
