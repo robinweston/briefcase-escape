@@ -1,0 +1,29 @@
+# Godot 4 generated files
+.godot/
+
+# Legacy Godot import metadata
+.import/
+
+# Export credentials and generated exports
+export_credentials.cfg
+export.cfg
+/build/
+/android/.gradle/
+
+# Generated translations
+*.translation
+
+# C# / Mono generated files
+.mono/
+data_*/
+mono_crash.*.json
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
+# Temporary files
+*.tmp
+/tmp/
+/output/
