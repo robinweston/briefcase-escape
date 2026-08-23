@@ -23,7 +23,7 @@ func show_report(succeeded: bool, floor_number: int) -> void:
 	report_heading.text = "ESCAPE REPORT · FLOOR %02d" % floor_number
 	stamp_label.text = "CLEARED" if succeeded else "CAUGHT"
 	if succeeded:
-		prompt_label.text = "PRESS START: PLAY AGAIN" if floor_number >= 3 else "PRESS START: NEXT LEVEL"
+		prompt_label.text = "PRESS SPACE TO PLAY AGAIN" if floor_number >= 3 else "PRESS SPACE FOR NEXT LEVEL"
 	else:
 		prompt_label.text = "PRESS SPACE TO RETRY"
 

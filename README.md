@@ -14,7 +14,7 @@ Major actions use the selected soft-office sound-effect set: starting, walking,
 transforming, collecting potions, worker alerts, pickup/drop, being caught,
 completing the level, and pausing/resuming all have distinct cues.
 
-The game opens on the **Briefcase Escape** title screen. Review the instructions and controls there, then press `Space`, `Enter`, or gamepad Start to begin. After the worker's surprise animation, being caught opens an **Escape Report**; press `Space` to retry. Reaching the exit opens the matching cleared report; press Start to continue to the next floor. There are three distinct floors: a forgiving introduction, a boardroom with six stationary coworkers facing into their conversation, and the full office challenge. Clearing floor three offers a fresh run from floor one.
+The game opens on the **Briefcase Escape** title screen. Review the instructions and controls there, then press `Space`, `Enter`, or gamepad Start to begin. After the worker's surprise animation, being caught opens an **Escape Report**; press `Space` to retry. Reaching the exit opens the matching cleared report; press `Space` to continue to the next floor. There are three distinct floors: a forgiving introduction, a boardroom with six stationary coworkers facing into their conversation, and the full office challenge. Clearing floor three offers a fresh run from floor one.
 
 The title screen and first level share a continuous loop of **Stealth in the
 Woods**, layered with busy office chatter, phones, writing, and typing.

@@ -20,7 +20,7 @@ The goal is to travel from the start of the office to the exit. Being seen plays
 - A worker's vision cone and detection are disabled while putting the briefcase away and returning to their patrol route.
 - Visible vision cones match the real detection angle and range and are clipped by sight-blocking geometry.
 - Office furniture and walls provide movement obstacles, cover, and readable stealth routes.
-- Reaching the exit opens a cleared Escape Report and waits for Start before continuing.
+- Reaching the exit opens a cleared Escape Report and waits for Space before continuing.
 - There is deliberately no click-to-move or touch-to-move behaviour.
 
 ## Camera and isometric presentation
