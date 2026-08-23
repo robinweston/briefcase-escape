@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dbr6g0u6apbj1"
-path="res://.godot/imported/start-zone.png-e7e31d9477bbc9e7c9368a42a8f94127.ctex"
+uid="uid://irjdtsvouh1e"
+path="res://.godot/imported/office-printer-north.png-689e2a22d3d12a949b5faa1607ea049d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/scenery/generated/start-zone.png"
-dest_files=["res://.godot/imported/start-zone.png-e7e31d9477bbc9e7c9368a42a8f94127.ctex"]
+source_file="res://assets/scenery/generated/office-printer-north.png"
+dest_files=["res://.godot/imported/office-printer-north.png-689e2a22d3d12a949b5faa1607ea049d.ctex"]
 
 [params]
 

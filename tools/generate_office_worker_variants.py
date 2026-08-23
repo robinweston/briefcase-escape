@@ -42,6 +42,8 @@ VARIANTS = (
     WorkerVariant("d-analyst", "Precise Analyst", "woman", "#8f6045", "bun", "#3d241f", "dot", "jacket", "#769179", CREAM, "glasses"),
     WorkerVariant("e-supervisor", "Sharp Supervisor", "man", "#e0a06d", "crop", "#b75a32", "angular", "jacket", "#a94e48", CREAM),
     WorkerVariant("f-creative", "Cheerful Creative", "woman", "#7b4d38", "wavy_bob", "#5a314f", "round", "blouse", "#d07878", "#ffe8cf", "lashes"),
+    WorkerVariant("g-coordinator", "Calm Coordinator", "woman", "#c98f6f", "ponytail", "#284a54", "soft", "blouse", "#4f8f86", "#f0c36a", "headset"),
+    WorkerVariant("h-specialist", "Resourceful Specialist", "non-binary", "#6f4938", "coils", "#211b24", "classic", "shirt", "#596aa8", "#c4e1d2", "earrings"),
 )
 
 
@@ -58,6 +60,10 @@ def _front_hair_back(v: WorkerVariant) -> str:
         return f'<circle class="ink" cx="75" cy="61" r="31" fill="{v.hair_color}"/>'
     if v.hair == "wavy_bob":
         return f'<path class="ink" d="M39 75Q48 15 128 12Q210 18 218 76L207 183Q188 203 169 177Q151 205 130 179Q107 205 88 178Q65 201 48 180Z" fill="{v.hair_color}"/>'
+    if v.hair == "ponytail":
+        return f'<path class="ink" d="M190 68Q229 79 221 132Q216 166 191 184Q180 150 187 112Z" fill="{v.hair_color}"/>'
+    if v.hair == "coils":
+        return f'<path class="ink" d="M38 87Q27 50 55 34Q60 7 91 13Q111 -5 132 11Q157 -3 172 18Q203 13 207 42Q233 60 215 91L204 153Q128 190 51 153Z" fill="{v.hair_color}"/>'
     return ""
 
 
@@ -69,6 +75,8 @@ def _front_hair(v: WorkerVariant) -> str:
         "bun": "M42 79Q62 17 136 13Q199 18 214 73Q168 56 130 68Q77 84 42 79Z",
         "crop": "M41 77Q54 22 107 13L125 43 144 12Q198 22 215 78Q169 59 128 69Q79 84 41 77Z",
         "wavy_bob": "M40 79Q44 16 108 11Q133 10 145 27Q170 7 194 32Q216 52 215 85L194 60 174 86 151 53 128 84 103 52 80 86 61 58Z",
+        "ponytail": "M41 78Q57 18 126 13Q192 16 215 77Q165 57 126 69Q78 86 41 78Z",
+        "coils": "M39 87Q29 57 54 43Q55 16 86 21Q106 1 129 17Q153 0 171 23Q200 17 205 47Q227 61 214 88Q164 66 126 73Q78 90 39 87Z",
     }
     return f'<path class="ink" d="{paths[v.hair]}" fill="{v.hair_color}"/>'
 
@@ -78,6 +86,8 @@ def _front_eyes(v: WorkerVariant) -> str:
         return f'<path class="fine" d="M62 100Q91 83 117 101Q91 124 65 104ZM139 101Q166 83 195 100L192 104Q165 124 139 101Z" fill="{CREAM}"/><circle cx="93" cy="104" r="5" fill="{INK}"/><circle cx="166" cy="104" r="5" fill="{INK}"/><path class="fine" d="M61 89Q89 73 118 89M139 89Q168 73 197 89" fill="none"/>'
     if v.eyes == "angular":
         return f'<path class="fine" d="M61 96L117 86Q111 121 70 119ZM139 86L195 96 186 119Q145 121 139 86Z" fill="{CREAM}"/><ellipse cx="94" cy="105" rx="7" ry="14" fill="{INK}"/><ellipse cx="162" cy="105" rx="7" ry="14" fill="{INK}"/><path class="ink" d="M61 75L116 65M140 65L195 75" fill="none"/>'
+    if v.eyes == "soft":
+        return f'<path class="fine" d="M63 101Q91 78 118 101Q91 126 63 101ZM138 101Q166 78 194 101Q166 126 138 101Z" fill="{CREAM}"/><ellipse cx="94" cy="104" rx="9" ry="15" fill="{INK}"/><ellipse cx="163" cy="104" rx="9" ry="15" fill="{INK}"/><circle cx="97" cy="99" r="3" fill="white"/><circle cx="166" cy="99" r="3" fill="white"/>'
     outer = '<ellipse class="fine" cx="91" cy="99" rx="28" ry="36" fill="%s"/><ellipse class="fine" cx="165" cy="99" rx="28" ry="36" fill="%s"/>' % (CREAM, CREAM)
     if v.eyes == "dot":
         return outer + f'<circle cx="93" cy="103" r="6" fill="{INK}"/><circle cx="167" cy="103" r="6" fill="{INK}"/>'
@@ -105,6 +115,10 @@ def _front_accessories(v: WorkerVariant) -> str:
         parts.append(f'<circle class="ink" cx="91" cy="99" r="38" fill="none"/><circle class="ink" cx="165" cy="99" r="38" fill="none"/><path class="ink" d="M129 99H127M53 99H40M203 99H216" fill="none"/>')
     if v.accessory == "lashes":
         parts.append('<path class="fine" d="M65 72l-10-9M72 66l-5-13M191 72l10-9M184 66l5-13" fill="none"/>')
+    if v.accessory == "headset":
+        parts.append(f'<path class="fine" d="M49 105Q40 43 128 35Q216 43 207 105M49 105V136M207 105V136M207 126Q220 130 215 151L185 157" fill="none"/><rect class="fine" x="38" y="105" width="22" height="38" rx="9" fill="{v.accent_color}"/><rect class="fine" x="196" y="105" width="22" height="38" rx="9" fill="{v.accent_color}"/>' )
+    if v.accessory == "earrings":
+        parts.append(f'<circle class="fine" cx="48" cy="145" r="8" fill="{v.accent_color}"/><circle class="fine" cx="208" cy="145" r="8" fill="{v.accent_color}"/>')
     return "".join(parts)
 
 
@@ -131,6 +145,10 @@ def _side_hair_back(v: WorkerVariant) -> str:
         return f'<circle class="ink" cx="62" cy="62" r="31" fill="{v.hair_color}"/>'
     if v.hair == "wavy_bob":
         return f'<path class="ink" d="M39 77Q51 17 132 14Q198 24 205 85L191 185Q173 203 157 178Q137 201 120 177Q96 200 75 175Q55 193 44 171Z" fill="{v.hair_color}"/>'
+    if v.hair == "ponytail":
+        return f'<path class="ink" d="M58 59Q22 78 31 132Q38 169 67 185Q77 148 70 109Z" fill="{v.hair_color}"/>'
+    if v.hair == "coils":
+        return f'<path class="ink" d="M37 89Q23 54 52 35Q55 9 88 14Q108 -4 132 13Q157 -1 173 20Q202 15 208 44Q230 61 214 91L198 164Q128 193 52 158Z" fill="{v.hair_color}"/>'
     return ""
 
 
@@ -142,6 +160,8 @@ def _side_hair(v: WorkerVariant) -> str:
         "bun": "M39 80Q61 18 139 15Q191 22 202 78Q153 61 109 73Q68 85 39 80Z",
         "crop": "M39 80Q54 24 110 14L128 45 146 13Q193 25 202 79Q153 62 110 73Q68 85 39 80Z",
         "wavy_bob": "M39 80Q45 17 111 13Q139 12 151 30Q175 10 197 37Q207 53 203 85L185 62 167 88 147 57 128 86 107 55 86 88 63 60Z",
+        "ponytail": "M39 80Q57 18 132 15Q190 21 202 79Q151 61 108 73Q67 85 39 80Z",
+        "coils": "M38 88Q27 58 51 43Q53 17 83 22Q104 2 128 18Q153 1 171 24Q198 18 204 48Q225 62 212 89Q159 67 112 75Q68 88 38 88Z",
     }
     return f'<path class="ink" d="{paths[v.hair]}" fill="{v.hair_color}"/>'
 
@@ -151,6 +171,8 @@ def _side_eye(v: WorkerVariant) -> str:
         return f'<path class="fine" d="M142 102Q170 86 195 102Q170 124 145 107Z" fill="{CREAM}"/><circle cx="174" cy="106" r="5" fill="{INK}"/><path class="fine" d="M142 91Q170 76 197 91" fill="none"/>'
     if v.eyes == "angular":
         return f'<path class="fine" d="M140 96L197 86 188 120Q149 121 140 96Z" fill="{CREAM}"/><ellipse cx="174" cy="107" rx="7" ry="14" fill="{INK}"/><path class="ink" d="M140 74L198 64" fill="none"/>'
+    if v.eyes == "soft":
+        return f'<path class="fine" d="M141 102Q170 80 197 102Q170 126 141 102Z" fill="{CREAM}"/><ellipse cx="176" cy="105" rx="9" ry="15" fill="{INK}"/><circle cx="179" cy="100" r="3" fill="white"/>'
     outer = f'<ellipse class="fine" cx="174" cy="101" rx="28" ry="36" fill="{CREAM}"/>'
     if v.eyes == "anime":
         return outer + f'<ellipse cx="176" cy="104" rx="15" ry="23" fill="#735b9f"/><ellipse cx="179" cy="108" rx="8" ry="14" fill="{INK}"/><path d="M169 93l3 6 6 3-6 3-3 6-3-6-6-3 6-3Z" fill="white"/>'
@@ -161,12 +183,20 @@ def _side_eye(v: WorkerVariant) -> str:
     return outer + f'<ellipse cx="182" cy="107" rx="10" ry="20" fill="{INK}"/><circle cx="185" cy="99" r="3.5" fill="white"/>'
 
 
-def side_character(v: WorkerVariant) -> str:
-    accessories = ""
+def _side_accessories(v: WorkerVariant) -> str:
     if v.accessory == "glasses":
-        accessories = f'<circle class="ink" cx="174" cy="101" r="39" fill="none"/><path class="ink" d="M211 101H228M136 101H126" fill="none"/>'
+        return f'<circle class="ink" cx="174" cy="101" r="39" fill="none"/><path class="ink" d="M211 101H228M136 101H126" fill="none"/>'
     if v.accessory == "lashes":
-        accessories = '<path class="fine" d="M196 76l9-10M190 71l5-13" fill="none"/>'
+        return '<path class="fine" d="M196 76l9-10M190 71l5-13" fill="none"/>'
+    if v.accessory == "headset":
+        return f'<path class="fine" d="M63 105Q54 42 137 35Q211 46 207 105M207 105V137M207 127Q221 132 215 151L185 157" fill="none"/><rect class="fine" x="196" y="105" width="22" height="39" rx="9" fill="{v.accent_color}"/>'
+    if v.accessory == "earrings":
+        return f'<circle class="fine" cx="200" cy="145" r="8" fill="{v.accent_color}"/>'
+    return ""
+
+
+def side_character(v: WorkerVariant) -> str:
+    accessories = _side_accessories(v)
     return f"""
     <g>
       <ellipse cx="128" cy="302" rx="80" ry="13" fill="{INK}" opacity=".12"/>
@@ -203,7 +233,8 @@ def preview_sheet(view: str) -> str:
           <text x="26" y="75" font-family="system-ui,sans-serif" font-size="17" fill="#756568">{variant.presentation} · {variant.hair} · {variant.outfit}</text>
           <g transform="translate(100 72)">{render(variant)}</g>
         </g>''')
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1428" viewBox="0 0 1024 1428">
+    sheet_height = 132 + ((len(VARIANTS) + 1) // 2) * 432
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="{sheet_height}" viewBox="0 0 1024 {sheet_height}">
       <title>Modular office worker {view} variants</title>{_style()}
       <rect width="1024" height="1428" fill="#f3eadc"/>
       <text x="48" y="65" font-family="system-ui,sans-serif" font-size="34" font-weight="800" fill="#2b2528">MODULAR OFFICE WORKERS — {view.upper()}</text>

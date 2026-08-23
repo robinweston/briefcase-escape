@@ -1,6 +1,7 @@
 extends Control
 
 const WorkerFrames = preload("res://scripts/worker_sprite_frames.gd")
+const MAIN_SCENE := preload("res://main.tscn")
 const BRIEFCASE_ATLAS := preload("res://assets/briefcase_walk.svg")
 const HIDDEN_BRIEFCASE := preload("res://assets/briefcase_hidden.svg")
 const SCENERY_TEXTURES := [
@@ -8,19 +9,34 @@ const SCENERY_TEXTURES := [
 	preload("res://assets/scenery/generated/divider.png"),
 	preload("res://assets/scenery/generated/filing-cabinet.png"),
 	preload("res://assets/scenery/generated/office-plant.png"),
-	preload("res://assets/scenery/generated/start-zone.png"),
 	preload("res://assets/scenery/generated/exit-sign.png"),
 	preload("res://assets/scenery/generated/disguise-potion.png"),
+	preload("res://assets/scenery/generated/office-printer.png"),
+	preload("res://assets/scenery/generated/vending-machine.png"),
+	preload("res://assets/scenery/generated/bathroom-sinks.png"),
+	preload("res://assets/scenery/generated/bathroom-toilet.png"),
 ]
 const SCENERY_NAMES := [
 	"Workstation",
 	"Cubicle Divider",
 	"Filing Cabinet",
 	"Office Plant",
-	"Start Zone",
 	"Exit Sign",
 	"Disguise Potion",
+	"Office Printer",
+	"Vending Machine",
+	"Bathroom Sinks",
+	"Bathroom Toilet",
 ]
+const DIRECTIONAL_SCENERY_ASSETS := {
+	0: "workstation",
+	2: "filing-cabinet",
+	6: "office-printer",
+	7: "vending-machine",
+	8: "bathroom-sinks",
+	9: "bathroom-toilet",
+}
+const PROP_DIRECTION_NAMES := ["S", "E", "N", "W"]
 const MUSIC_TRACKS := [
 	preload("res://assets/audio/stealth_in_the_woods.mp3"),
 	preload("res://assets/audio/suspense.ogg"),
@@ -60,10 +76,18 @@ const WORKER_ATLASES := [
 	preload("res://assets/office_workers/animated/d-analyst-atlas.svg"),
 	preload("res://assets/office_workers/animated/e-supervisor-atlas.svg"),
 	preload("res://assets/office_workers/animated/f-creative-atlas.svg"),
+	preload("res://assets/office_workers/animated/g-coordinator-atlas.svg"),
+	preload("res://assets/office_workers/animated/h-specialist-atlas.svg"),
 ]
 const WORKER_NAMES := [
 	"Eager Intern", "Anime Ace", "Tired Manager", "Precise Analyst",
-	"Sharp Supervisor", "Cheerful Creative",
+	"Sharp Supervisor", "Cheerful Creative", "Calm Coordinator",
+	"Resourceful Specialist",
+]
+const ROUTE_COLORS := [
+	Color("#ef476f"), Color("#f78c3d"), Color("#ffd166"),
+	Color("#06d6a0"), Color("#36a2eb"), Color("#9b5de5"),
+	Color("#00a8a8"), Color("#7f5539"),
 ]
 const STATES := [&"idle", &"walk", &"surprised", &"carry_cross"]
 const STATE_LABELS := ["Idle", "Walk", "Caught: surprised", "Hidden catch: cross carry"]
@@ -105,6 +129,8 @@ func _ready() -> void:
 	_build_ui()
 	_refresh_animations()
 	set_process(true)
+	if not _level_map_capture_path().is_empty():
+		_capture_level_map.call_deferred()
 
 
 func _process(_delta: float) -> void:
@@ -117,9 +143,36 @@ func _process(_delta: float) -> void:
 
 
 func _configure_gallery_window() -> void:
-	if DisplayServer.get_name() == "headless":
+	if DisplayServer.get_name() == "headless" or not _level_map_capture_path().is_empty():
 		return
 	get_window().mode = Window.MODE_MAXIMIZED
+
+
+func _level_map_capture_path() -> String:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--capture-level-map="):
+			return argument.trim_prefix("--capture-level-map=")
+	return ""
+
+
+func _capture_level_map() -> void:
+	for tab_index in gallery_tabs.get_tab_count():
+		if gallery_tabs.get_tab_control(tab_index).name == &"Level Map":
+			gallery_tabs.current_tab = tab_index
+			break
+
+	# Wait for both the gallery and its embedded 3D viewport to finish drawing.
+	await RenderingServer.frame_post_draw
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var capture_path := _level_map_capture_path()
+	var image := get_viewport().get_texture().get_image()
+	var error := image.save_png(ProjectSettings.globalize_path(capture_path))
+	if error == OK:
+		print("Saved level map snapshot to %s" % capture_path)
+	else:
+		push_error("Could not save level map snapshot to %s (error %d)" % [capture_path, error])
+	get_tree().quit(error)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -189,6 +242,11 @@ func _build_ui() -> void:
 	scenery_page.name = "Scenery"
 	tabs.add_child(scenery_page)
 	_build_scenery_page(scenery_page)
+
+	var level_map_page := Control.new()
+	level_map_page.name = "Level Map"
+	tabs.add_child(level_map_page)
+	_build_level_map_page(level_map_page)
 
 	var audio_page := Control.new()
 	audio_page.name = "Audio"
@@ -270,11 +328,11 @@ func _build_people_page(page: Control) -> void:
 	page.add_child(help)
 
 	for index in WORKER_ATLASES.size():
-		var column := index % 3
-		var row := index / 3
+		var column := index % 4
+		var row := index / 4
 		var panel := Panel.new()
-		panel.position = Vector2(8.0 + column * 399.0, 55.0 + row * 265.0)
-		panel.size = Vector2(376.0, 240.0)
+		panel.position = Vector2(6.0 + column * 301.0, 55.0 + row * 265.0)
+		panel.size = Vector2(286.0, 240.0)
 		var panel_style := StyleBoxFlat.new()
 		panel_style.bg_color = Color("#fffaf0")
 		panel_style.border_color = Color("#dfd1be")
@@ -286,7 +344,7 @@ func _build_people_page(page: Control) -> void:
 		var name_label := Label.new()
 		name_label.text = WORKER_NAMES[index]
 		name_label.position = panel.position + Vector2(14.0, 10.0)
-		name_label.size = Vector2(348.0, 30.0)
+		name_label.size = Vector2(258.0, 30.0)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_label.add_theme_font_size_override("font_size", 24)
 		name_label.add_theme_color_override("font_color", Color("#322a2b"))
@@ -294,7 +352,7 @@ func _build_people_page(page: Control) -> void:
 
 		var sprite := AnimatedSprite2D.new()
 		sprite.sprite_frames = WorkerFrames.create(WORKER_ATLASES[index])
-		sprite.position = panel.position + Vector2(188.0, 140.0)
+		sprite.position = panel.position + Vector2(143.0, 140.0)
 		sprite.scale = Vector2(1.08, 1.08)
 		page.add_child(sprite)
 		sprites.append(sprite)
@@ -424,11 +482,11 @@ func _build_scenery_page(page: Control) -> void:
 	page.add_child(intro)
 
 	for index in SCENERY_TEXTURES.size():
-		var column := index % 4
-		var row := index / 4
+		var column := index % 6
+		var row := index / 6
 		var panel := _gallery_panel(
-			Vector2(8.0 + column * 301.0, 55.0 + row * 265.0),
-			Vector2(285.0, 240.0)
+			Vector2(8.0 + column * 199.0, 55.0 + row * 265.0),
+			Vector2(187.0, 240.0)
 		)
 		panel.clip_contents = true
 		page.add_child(panel)
@@ -437,17 +495,212 @@ func _build_scenery_page(page: Control) -> void:
 		name_label.add_theme_font_size_override("font_size", 21)
 		panel.add_child(name_label)
 
-		var preview := Sprite2D.new()
-		preview.texture = SCENERY_TEXTURES[index]
-		preview.position = Vector2(panel.size.x * 0.5, 142.0)
-		var texture_size := preview.texture.get_size()
-		var preview_bounds := Vector2(249.0, 176.0)
-		var fit_scale: float = min(
-			preview_bounds.x / texture_size.x,
-			preview_bounds.y / texture_size.y
+		var directional_textures := _gallery_directional_prop_textures(index)
+		if directional_textures.size() == 4:
+			for direction_index in directional_textures.size():
+				var preview := Sprite2D.new()
+				preview.texture = directional_textures[direction_index]
+				preview.position = Vector2(
+					50.0 + (direction_index % 2) * 87.0,
+					94.0 + (direction_index / 2) * 92.0
+				)
+				var texture_size := preview.texture.get_size()
+				var fit_scale: float = min(72.0 / texture_size.x, 68.0 / texture_size.y)
+				preview.scale = Vector2.ONE * fit_scale
+				panel.add_child(preview)
+
+				var direction_label := _gallery_panel_label(
+					PROP_DIRECTION_NAMES[direction_index],
+					preview.position + Vector2(-36.0, 34.0),
+					72.0
+				)
+				direction_label.add_theme_font_size_override("font_size", 13)
+				panel.add_child(direction_label)
+		else:
+			var preview := Sprite2D.new()
+			preview.texture = SCENERY_TEXTURES[index]
+			preview.position = Vector2(panel.size.x * 0.5, 142.0)
+			var texture_size := preview.texture.get_size()
+			var preview_bounds := Vector2(161.0, 176.0)
+			var fit_scale: float = min(
+				preview_bounds.x / texture_size.x,
+				preview_bounds.y / texture_size.y
+			)
+			preview.scale = Vector2.ONE * fit_scale
+			panel.add_child(preview)
+
+
+func _gallery_directional_prop_textures(index: int) -> Array[Texture2D]:
+	if not DIRECTIONAL_SCENERY_ASSETS.has(index):
+		return []
+	var textures: Array[Texture2D] = [SCENERY_TEXTURES[index]]
+	var asset_name: String = DIRECTIONAL_SCENERY_ASSETS[index]
+	for direction in ["east", "north", "west"]:
+		var path := "res://assets/scenery/generated/%s-%s.png" % [asset_name, direction]
+		if not ResourceLoader.exists(path):
+			return []
+		var texture := load(path) as Texture2D
+		if texture == null:
+			return []
+		textures.append(texture)
+	return textures
+
+
+func _build_level_map_page(page: Control) -> void:
+	var page_background := ColorRect.new()
+	page_background.color = Color("#f3eadc")
+	page_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	page.add_child(page_background)
+
+	var intro := Label.new()
+	intro.text = "WHOLE-OFFICE SNAPSHOT  ·  live layout from the gameplay scene"
+	intro.position = Vector2(16.0, 10.0)
+	intro.add_theme_font_size_override("font_size", 20)
+	intro.add_theme_color_override("font_color", Color("#5f5356"))
+	page.add_child(intro)
+
+	var map_frame := _gallery_panel(Vector2(8.0, 46.0), Vector2(925.0, 532.0))
+	map_frame.clip_contents = true
+	page.add_child(map_frame)
+
+	var viewport_container := SubViewportContainer.new()
+	viewport_container.position = Vector2(6.0, 6.0)
+	viewport_container.size = map_frame.size - Vector2(12.0, 12.0)
+	viewport_container.stretch = true
+	map_frame.add_child(viewport_container)
+
+	var map_viewport := SubViewport.new()
+	map_viewport.size = Vector2i(913, 520)
+	map_viewport.own_world_3d = true
+	map_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	map_viewport.msaa_3d = Viewport.MSAA_4X
+	viewport_container.add_child(map_viewport)
+
+	var level := MAIN_SCENE.instantiate()
+	map_viewport.add_child(level)
+	for child in level.get_children():
+		if child is CanvasLayer:
+			child.visible = false
+	for player_name in [&"music_player", &"office_ambience_player", &"sfx_player"]:
+		var embedded_player: AudioStreamPlayer = level.get(player_name)
+		if embedded_player:
+			embedded_player.stop()
+	level.process_mode = Node.PROCESS_MODE_DISABLED
+
+	var gameplay_camera: Camera3D = level.get("camera")
+	if gameplay_camera:
+		gameplay_camera.current = false
+	var overview_camera := Camera3D.new()
+	overview_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	overview_camera.size = 21.5
+	overview_camera.position = Vector3(0.0, 25.0, 0.0)
+	level.add_child(overview_camera)
+	overview_camera.look_at(Vector3.ZERO, Vector3(0.0, 0.0, -1.0))
+	overview_camera.current = true
+
+	var workers_value: Variant = level.get("workers")
+	for worker_value in workers_value:
+		var worker: Dictionary = worker_value
+		var cone: MeshInstance3D = worker["cone"]
+		cone.visible = false
+
+	var routes_value: Variant = level.get("worker_routes")
+	for route_index in routes_value.size():
+		_add_patrol_route_overlay(
+			level,
+			routes_value[route_index],
+			ROUTE_COLORS[route_index % ROUTE_COLORS.size()],
+			route_index + 1
 		)
-		preview.scale = Vector2.ONE * fit_scale
-		panel.add_child(preview)
+
+	var legend := VBoxContainer.new()
+	legend.position = Vector2(955.0, 55.0)
+	legend.size = Vector2(250.0, 500.0)
+	legend.add_theme_constant_override("separation", 12)
+	page.add_child(legend)
+
+	var legend_title := Label.new()
+	legend_title.text = "WORKER ROUTES"
+	legend_title.add_theme_font_size_override("font_size", 22)
+	legend_title.add_theme_color_override("font_color", Color("#322a2b"))
+	legend.add_child(legend_title)
+	for index in WORKER_NAMES.size():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		legend.add_child(row)
+		var swatch := ColorRect.new()
+		swatch.color = ROUTE_COLORS[index]
+		swatch.custom_minimum_size = Vector2(22.0, 22.0)
+		row.add_child(swatch)
+		var route_label := Label.new()
+		route_label.text = "%d  %s" % [index + 1, WORKER_NAMES[index]]
+		route_label.add_theme_font_size_override("font_size", 17)
+		route_label.add_theme_color_override("font_color", Color("#453c3e"))
+		row.add_child(route_label)
+
+	var note := Label.new()
+	note.text = "Routes are drawn over the real office geometry. Coloured dots mark turning points; every path closes into a loop."
+	note.custom_minimum_size = Vector2(235.0, 100.0)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.add_theme_font_size_override("font_size", 16)
+	note.add_theme_color_override("font_color", Color("#786a6d"))
+	legend.add_child(note)
+
+
+func _add_patrol_route_overlay(
+	level: Node3D,
+	route: PackedVector3Array,
+	color: Color,
+	route_number: int
+) -> void:
+	var route_material := StandardMaterial3D.new()
+	route_material.albedo_color = Color(color, 0.9)
+	route_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	route_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	route_material.no_depth_test = true
+	route_material.render_priority = 1
+
+	for point_index in route.size():
+		var from := route[point_index]
+		var to := route[(point_index + 1) % route.size()]
+		var delta := to - from
+		var segment := MeshInstance3D.new()
+		var segment_mesh := BoxMesh.new()
+		segment_mesh.size = Vector3(0.14, 0.035, delta.length())
+		segment.mesh = segment_mesh
+		segment.material_override = route_material
+		segment.position = (from + to) * 0.5 + Vector3(0.0, 0.08, 0.0)
+		segment.rotation.y = atan2(delta.x, delta.z)
+		segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		level.add_child(segment)
+
+	for point_index in route.size():
+		var marker := MeshInstance3D.new()
+		var marker_mesh := CylinderMesh.new()
+		marker_mesh.top_radius = 0.25
+		marker_mesh.bottom_radius = 0.25
+		marker_mesh.height = 0.05
+		marker.mesh = marker_mesh
+		marker.material_override = route_material
+		marker.position = route[point_index] + Vector3(0.0, 0.11, 0.0)
+		marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		level.add_child(marker)
+
+	var number_label := Label3D.new()
+	number_label.text = str(route_number)
+	number_label.font_size = 48
+	number_label.pixel_size = 0.018
+	number_label.modulate = Color("#17202e")
+	number_label.outline_modulate = Color.WHITE
+	number_label.outline_size = 8
+	number_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	number_label.no_depth_test = true
+	var first_segment := route[1] - route[0]
+	var label_offset := Vector3(-first_segment.z, 0.0, first_segment.x).normalized() * 0.38
+	number_label.position = (
+		(route[0] + route[1]) * 0.5 + label_offset + Vector3(0.0, 0.16, 0.0)
+	)
+	level.add_child(number_label)
 
 
 func _build_audio_page(page: Control) -> void:

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320"><title>Modular office worker</title>
+    <style>
+      .ink{stroke:#2b2528;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+      .fine{stroke:#2b2528;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+    <g>
+      <ellipse cx="128" cy="302" rx="80" ry="13" fill="#2b2528" opacity=".12"/>
+      <path class="ink" d="M190 68Q229 79 221 132Q216 166 191 184Q180 150 187 112Z" fill="#284a54"/>
+      <path class="ink" d="M86 268Q80 292 73 297M170 268Q176 292 183 297" fill="none"/>
+      <path class="ink" d="M74 297q-16 12-30 0 5-18 28-15M182 297q16 12 30 0-5-18-28-15" fill="#f0c36a"/>
+      <path class="ink" d="M63 195Q35 218 24 238M193 195Q221 218 232 238" fill="none"/>
+      <circle class="fine" cx="24" cy="238" r="10" fill="#c98f6f"/><circle class="fine" cx="232" cy="238" r="10" fill="#c98f6f"/>
+      <path class="ink" d="M59 183Q128 161 197 183L188 273Q128 291 68 273Z" fill="#4f8f86"/><path class="fine" d="M96 179L128 211 160 179M128 211V278" fill="#f0c36a"/>
+      <path class="ink" d="M39 77Q49 20 128 14Q207 20 217 77L205 169Q128 203 51 169Z" fill="#c98f6f"/>
+      <path class="ink" d="M41 78Q57 18 126 13Q192 16 215 77Q165 57 126 69Q78 86 41 78Z" fill="#284a54"/>
+      <path class="fine" d="M63 101Q91 78 118 101Q91 126 63 101ZM138 101Q166 78 194 101Q166 126 138 101Z" fill="#fff8e9"/><ellipse cx="94" cy="104" rx="9" ry="15" fill="#2b2528"/><ellipse cx="163" cy="104" rx="9" ry="15" fill="#2b2528"/><circle cx="97" cy="99" r="3" fill="white"/><circle cx="166" cy="99" r="3" fill="white"/>
+      <path class="fine" d="M49 105Q40 43 128 35Q216 43 207 105M49 105V136M207 105V136M207 126Q220 130 215 151L185 157" fill="none"/><rect class="fine" x="38" y="105" width="22" height="38" rx="9" fill="#f0c36a"/><rect class="fine" x="196" y="105" width="22" height="38" rx="9" fill="#f0c36a"/>
+      <path class="fine" d="M96 147Q128 172 161 147" fill="none"/>
+    </g></svg>

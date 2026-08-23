@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#30383f"/>
+  <g fill="#374149">
+    <rect x="4" y="4" width="248" height="120" rx="3"/>
+    <rect x="260" y="4" width="248" height="120" rx="3"/>
+    <rect x="4" y="132" width="120" height="120" rx="3"/>
+    <rect x="132" y="132" width="248" height="120" rx="3"/>
+    <rect x="388" y="132" width="120" height="120" rx="3"/>
+    <rect x="4" y="260" width="248" height="120" rx="3"/>
+    <rect x="260" y="260" width="248" height="120" rx="3"/>
+    <rect x="4" y="388" width="120" height="120" rx="3"/>
+    <rect x="132" y="388" width="248" height="120" rx="3"/>
+    <rect x="388" y="388" width="120" height="120" rx="3"/>
+  </g>
+  <g fill="none" stroke="#46525b" stroke-width="2" opacity="0.42">
+    <path d="M8 38h240M8 88h240M264 38h240M264 88h240"/>
+    <path d="M8 166h112M8 216h112M136 166h240M136 216h240M392 166h112M392 216h112"/>
+    <path d="M8 294h240M8 344h240M264 294h240M264 344h240"/>
+    <path d="M8 422h112M8 472h112M136 422h240M136 472h240M392 422h112M392 472h112"/>
+  </g>
+  <g fill="#68757d" opacity="0.16">
+    <circle cx="42" cy="72" r="2"/><circle cx="194" cy="24" r="1.5"/>
+    <circle cx="308" cy="96" r="2"/><circle cx="462" cy="52" r="1.5"/>
+    <circle cx="76" cy="208" r="1.5"/><circle cx="224" cy="176" r="2"/>
+    <circle cx="344" cy="226" r="1.5"/><circle cx="474" cy="160" r="2"/>
+    <circle cx="54" cy="330" r="2"/><circle cx="206" cy="278" r="1.5"/>
+    <circle cx="328" cy="350" r="2"/><circle cx="452" cy="306" r="1.5"/>
+    <circle cx="88" cy="456" r="2"/><circle cx="246" cy="414" r="1.5"/>
+    <circle cx="362" cy="482" r="2"/><circle cx="486" cy="430" r="1.5"/>
+  </g>
+</svg>

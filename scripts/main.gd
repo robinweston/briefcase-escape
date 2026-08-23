@@ -2,6 +2,16 @@ extends Node3D
 
 const WORLD_X_HALF := 15.0
 const WORLD_Z_HALF := 10.0
+const TILE_SIZE := 0.5
+const DIVIDER_THICKNESS := 0.16
+const WORKSTATION_TILES := Vector3i(5, 2, 2)
+const FILING_CABINET_TILES := Vector3i(3, 3, 2)
+const FILING_CABINET_STACK_STRIDE := TILE_SIZE
+const OFFICE_PLANT_TILES := Vector3i(3, 3, 2)
+const OFFICE_PRINTER_TILES := Vector3i(3, 3, 2)
+const VENDING_MACHINE_TILES := Vector3i(3, 4, 2)
+const BATHROOM_SINKS_TILES := Vector3i(5, 3, 2)
+const BATHROOM_TOILET_TILES := Vector3i(2, 2, 2)
 const MOVE_SPEED := 4.2
 const WORKER_SPEED := 1.35
 const VISION_RANGE := 3.8
@@ -13,20 +23,24 @@ const CAMERA_OFFSET := Vector3(0.0, 12.0, 10.0)
 const WorkerFrames = preload("res://scripts/worker_sprite_frames.gd")
 const TitleScreen = preload("res://scripts/title_screen.gd")
 const PauseController = preload("res://scripts/pause_controller.gd")
+const ResultScreen = preload("res://scripts/result_screen.gd")
 const BRIEFCASE_ATLAS := preload("res://assets/briefcase_walk.svg")
 const HIDDEN_BRIEFCASE_TEXTURE := preload("res://assets/briefcase_hidden.svg")
 const FLOOR_CARPET_BLUE_GREY := preload("res://assets/flooring/office-carpet-blue-grey.png")
 const FLOOR_CARPET_TEAL := preload("res://assets/flooring/office-carpet-teal-accent.png")
-const FLOOR_LINOLEUM := preload("res://assets/flooring/office-linoleum-terracotta.png")
+const FLOOR_VINYL_CHARCOAL := preload("res://assets/flooring/office-vinyl-charcoal.svg")
 const FLOOR_WOOD := preload("res://assets/flooring/office-wood-dark.png")
 const FLOOR_TINT := Color("#929b9c")
 const WORKSTATION_TEXTURE := preload("res://assets/scenery/generated/workstation.png")
 const DIVIDER_TEXTURE := preload("res://assets/scenery/generated/divider.png")
 const FILING_CABINET_TEXTURE := preload("res://assets/scenery/generated/filing-cabinet.png")
 const OFFICE_PLANT_TEXTURE := preload("res://assets/scenery/generated/office-plant.png")
-const START_ZONE_TEXTURE := preload("res://assets/scenery/generated/start-zone.png")
 const EXIT_SIGN_TEXTURE := preload("res://assets/scenery/generated/exit-sign.png")
 const DISGUISE_POTION_TEXTURE := preload("res://assets/scenery/generated/disguise-potion.png")
+const OFFICE_PRINTER_TEXTURE := preload("res://assets/scenery/generated/office-printer.png")
+const VENDING_MACHINE_TEXTURE := preload("res://assets/scenery/generated/vending-machine.png")
+const BATHROOM_SINKS_TEXTURE := preload("res://assets/scenery/generated/bathroom-sinks.png")
+const BATHROOM_TOILET_TEXTURE := preload("res://assets/scenery/generated/bathroom-toilet.png")
 const LEVEL_MUSIC := preload("res://assets/audio/stealth_in_the_woods.mp3")
 const OFFICE_AMBIENCE := preload("res://assets/audio/busy_office_ambience.mp3")
 const SFX_GAME_START := preload("res://assets/audio/sfx/game_start_1.wav")
@@ -45,34 +59,83 @@ const WORKER_ATLASES := [
 	preload("res://assets/office_workers/animated/d-analyst-atlas.svg"),
 	preload("res://assets/office_workers/animated/e-supervisor-atlas.svg"),
 	preload("res://assets/office_workers/animated/f-creative-atlas.svg"),
+	preload("res://assets/office_workers/animated/g-coordinator-atlas.svg"),
+	preload("res://assets/office_workers/animated/h-specialist-atlas.svg"),
 ]
 const BRIEFCASE_DIRECTIONS := [&"s", &"e", &"n", &"w"]
 const BRIEFCASE_FRAME_SIZE := Vector2(256.0, 256.0)
+const BRIEFCASE_SPRITE_PIXEL_SIZE := 0.0041
 const BRIEFCASE_WALK_FPS := 9.0
 const HIDDEN_TIME_MAX := 5.0
 const POTION_REFILL := 1.0
-const CARRY_SPEED := 2.25
+const CARRY_SPEED := 2.7
+const WORKER_PATH_RADIUS := 0.36
+const CARRIED_BRIEFCASE_HEIGHT := 0.62
+const CARRIED_BRIEFCASE_OCCLUSION_DEPTH := 0.58
 const TRANSFORM_TIME := 0.28
+const OPENING_DISGUISE_DELAY := 1.0
 const PROP_INK := Color("#26344a")
-const WORKER_SPRITE_PIXEL_SIZE := 0.0108
+const WORKER_SPRITE_PIXEL_SIZE := 0.0093
+enum StaticPropFacing { SOUTH, EAST, NORTH, WEST }
+const BATHROOM_POTION_POSITION := Vector3(-12.75, 0.0, -8.35)
 const POTION_POSITIONS := [
-	Vector3(-12.8, 0.0, -7.2),
+	BATHROOM_POTION_POSITION,
 	Vector3(-11.0, 0.0, 0.2),
 	Vector3(-6.0, 0.0, 4.8),
 	Vector3(0.0, 0.0, 7.6),
 	Vector3(0.0, 0.0, -7.6),
 	Vector3(6.0, 0.0, 4.8),
 	Vector3(11.0, 0.0, -0.2),
-	Vector3(12.8, 0.0, 7.2),
+	Vector3(11.8, 0.0, 7.0),
 ]
 
 var worker_routes: Array[PackedVector3Array] = [
-	PackedVector3Array([Vector3(-11.5, 0.0, 7.8), Vector3(-3.6, 0.0, 7.8)]),
-	PackedVector3Array([Vector3(-10.5, 0.0, 2.5), Vector3(1.5, 0.0, 2.5)]),
-	PackedVector3Array([Vector3(-1.5, 0.0, -2.5), Vector3(10.5, 0.0, -2.5)]),
-	PackedVector3Array([Vector3(3.8, 0.0, -7.8), Vector3(11.6, 0.0, -7.8)]),
-	PackedVector3Array([Vector3(-6.0, 0.0, 6.8), Vector3(-6.0, 0.0, -1.7)]),
-	PackedVector3Array([Vector3(6.0, 0.0, 1.8), Vector3(6.0, 0.0, -6.8)]),
+	# Long patrols use the partition doorways to move between rooms. The red
+	# worker starts by walking away from the briefcase and spends most of each
+	# circuit outside the starting room, giving the opening route room to breathe.
+	PackedVector3Array([
+		Vector3(-10.8, 0.0, 7.6), Vector3(6.0, 0.0, 7.6),
+		Vector3(6.0, 0.0, 9.2), Vector3(4.5, 0.0, 9.2),
+		Vector3(4.5, 0.0, 7.6),
+	]),
+	PackedVector3Array([
+		Vector3(-11.3, 0.0, 2.5), Vector3(-6.0, 0.0, 2.5),
+		Vector3(-6.0, 0.0, 7.6), Vector3(-4.2, 0.0, 7.6),
+		Vector3(-6.0, 0.0, 7.6), Vector3(-6.0, 0.0, -2.5),
+		Vector3(-11.3, 0.0, -2.5),
+	]),
+	PackedVector3Array([
+		Vector3(6.0, 0.0, -2.5), Vector3(11.4, 0.0, -2.5),
+		Vector3(11.4, 0.0, 2.5), Vector3(6.0, 0.0, 2.5),
+		Vector3(6.0, 0.0, -7.8), Vector3(3.8, 0.0, -7.8),
+		Vector3(6.0, 0.0, -7.8),
+	]),
+	PackedVector3Array([
+		Vector3(3.8, 0.0, -7.8), Vector3(-6.5, 0.0, -7.8),
+		Vector3(-6.5, 0.0, -8.8), Vector3(-2.8, 0.0, -8.8),
+		Vector3(-2.8, 0.0, -7.8),
+	]),
+	PackedVector3Array([
+		Vector3(-6.0, 0.0, 6.8), Vector3(-6.0, 0.0, 2.5),
+		Vector3(-11.3, 0.0, 2.5), Vector3(-11.3, 0.0, -2.5),
+		Vector3(-6.0, 0.0, -2.5),
+	]),
+	PackedVector3Array([
+		Vector3(0.8, 0.0, 1.8), Vector3(0.8, 0.0, -2.5),
+		Vector3(-11.3, 0.0, -2.5), Vector3(-11.3, 0.0, 2.5),
+		Vector3(0.8, 0.0, 2.5),
+	]),
+	PackedVector3Array([
+		Vector3(-9.5, 0.0, -7.8), Vector3(11.5, 0.0, -7.8),
+		Vector3(11.5, 0.0, -9.0), Vector3(3.8, 0.0, -9.0),
+		Vector3(3.8, 0.0, -7.8),
+	]),
+	PackedVector3Array([
+		Vector3(4.8, 0.0, 7.5), Vector3(6.0, 0.0, 7.5),
+		Vector3(6.0, 0.0, 2.5), Vector3(11.4, 0.0, 2.5),
+		Vector3(11.4, 0.0, -2.5), Vector3(6.0, 0.0, -2.5),
+		Vector3(6.0, 0.0, 7.5),
+	]),
 ]
 
 var player: CharacterBody3D
@@ -87,11 +150,17 @@ var potions: Array[Node3D] = []
 var status_label: Label
 var hidden_time_bar: ProgressBar
 var hidden_time_label: Label
+var hidden_time_seconds_label: Label
+var disguise_panel_style: StyleBoxFlat
+var hidden_time_bar_background: StyleBoxFlat
+var hidden_time_bar_fill: StyleBoxFlat
 var resetting := false
 var level_complete := false
-var hidden_mode := false
+var hidden_mode := true
 var hidden_time := HIDDEN_TIME_MAX
+var starting_disguise := true
 var is_transforming := false
+var opening_animation_active := false
 var pickup_worker: Dictionary = {}
 var carrying_worker: Dictionary = {}
 var carry_target := Vector3.ZERO
@@ -99,11 +168,16 @@ var pickup_route := PackedVector3Array()
 var pickup_route_index := 0
 var carry_route := PackedVector3Array()
 var carry_route_index := 0
+var excursion_route := PackedVector3Array()
+var interrupted_patrol_index := 0
 var pickup_cooldown := 0.0
 var transformation_tween: Tween
 var gameplay_hud: CanvasLayer
 var title_screen: CanvasLayer
+var result_screen: CanvasLayer
+var pause_controller
 var title_screen_active := false
+var floor_number := 1
 var music_player: AudioStreamPlayer
 var office_ambience_player: AudioStreamPlayer
 var sfx_player: AudioStreamPlayer
@@ -119,13 +193,24 @@ func _ready() -> void:
 	_update_hidden_time_hud()
 	if not _should_skip_title_screen():
 		_show_title_screen()
+	else:
+		office_ambience_player.play()
+		_begin_opening_animation()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if title_screen_active:
-		if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+		if _is_start_event(event):
 			_start_first_level()
 			get_viewport().set_input_as_handled()
+		return
+	if result_screen.is_report_visible():
+		if _is_start_event(event):
+			_continue_from_result()
+			get_viewport().set_input_as_handled()
+		return
+	if opening_animation_active:
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("toggle_disguise") and not resetting and not level_complete:
 		if carrying_worker.is_empty() and not is_transforming:
@@ -137,18 +222,19 @@ func _physics_process(delta: float) -> void:
 		player.velocity = Vector3.ZERO
 		_set_player_animation(Vector2.ZERO)
 		return
-	if resetting or level_complete:
+	if resetting or level_complete or opening_animation_active:
 		player.velocity = Vector3.ZERO
 		_set_player_animation(Vector2.ZERO)
 		return
 
 	pickup_cooldown = maxf(0.0, pickup_cooldown - delta)
 	_update_workers(delta)
-	if carrying_worker.is_empty() and pickup_worker.is_empty():
+	if carrying_worker.is_empty() and pickup_worker.is_empty() and not hidden_mode:
 		_update_player()
 		_collect_nearby_potion()
 	else:
 		player.velocity = Vector3.ZERO
+		_set_player_animation(Vector2.ZERO)
 	_update_camera(delta)
 
 	if not carrying_worker.is_empty():
@@ -156,7 +242,7 @@ func _physics_process(delta: float) -> void:
 	if not pickup_worker.is_empty():
 		if not hidden_mode:
 			_caught(pickup_worker)
-		else:
+		elif not starting_disguise:
 			_drain_hidden_time(delta)
 		return
 
@@ -168,7 +254,7 @@ func _physics_process(delta: float) -> void:
 			_caught(seeing_worker)
 		return
 
-	if hidden_mode:
+	if hidden_mode and not starting_disguise:
 		_drain_hidden_time(delta)
 
 	if player.global_position.distance_to(EXIT_POSITION) < 0.8:
@@ -230,6 +316,10 @@ func _update_workers(_delta: float) -> void:
 			_update_carrying_worker(worker)
 			_update_vision_cone(worker)
 			continue
+		if worker["returning"]:
+			_update_returning_worker(worker)
+			_update_vision_cone(worker)
+			continue
 		if not pickup_worker.is_empty() and body == pickup_worker["body"]:
 			_update_pickup_worker(worker)
 			_update_vision_cone(worker)
@@ -265,6 +355,7 @@ func _update_pickup_worker(worker: Dictionary) -> void:
 			_lift_player(worker)
 			return
 		body.position = target
+		excursion_route.append(target)
 		pickup_route_index += 1
 		target = pickup_route[pickup_route_index]
 		offset = target - body.position
@@ -289,7 +380,7 @@ func _update_carrying_worker(worker: Dictionary) -> void:
 			_finish_carry(worker)
 			return
 		body.position = target
-		player.global_position = body.global_position + Vector3(0.0, 0.62, 0.0)
+		excursion_route.append(target)
 		carry_route_index += 1
 		target = carry_route[carry_route_index]
 		offset = target - body.position
@@ -300,7 +391,32 @@ func _update_carrying_worker(worker: Dictionary) -> void:
 	body.rotation.y = atan2(-direction.x, -direction.z)
 	_set_worker_animation(worker, &"carry_cross", direction)
 	body.move_and_slide()
-	player.global_position = body.global_position + Vector3(0.0, 0.62, 0.0)
+	_position_carried_player(worker)
+
+
+func _update_returning_worker(worker: Dictionary) -> void:
+	var body: CharacterBody3D = worker["body"]
+	var route: PackedVector3Array = worker["return_route"]
+	var route_index: int = worker["return_route_index"]
+	var target := route[route_index]
+	var offset := target - body.position
+	offset.y = 0.0
+	if offset.length() < 0.08:
+		body.position = target
+		if route_index == route.size() - 1:
+			_finish_return(worker)
+			return
+		route_index += 1
+		worker["return_route_index"] = route_index
+		target = route[route_index]
+		offset = target - body.position
+		offset.y = 0.0
+
+	var direction := _cardinal_world_direction(offset)
+	body.velocity = direction * WORKER_SPEED
+	body.rotation.y = atan2(-direction.x, -direction.z)
+	_set_worker_animation(worker, &"walk", direction)
+	body.move_and_slide()
 
 
 func _cardinal_world_direction(offset: Vector3) -> Vector3:
@@ -323,9 +439,102 @@ func _cardinal_route(from: Vector3, to: Vector3) -> PackedVector3Array:
 	return route
 
 
+func _collision_safe_cardinal_route(from: Vector3, to: Vector3) -> PackedVector3Array:
+	var start := _world_to_path_cell(from)
+	var goal := _world_to_path_cell(to)
+	var frontier: Array[Vector2i] = [start]
+	var frontier_index := 0
+	var parents := {start: start}
+	var directions: Array[Vector2i] = [
+		Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP,
+	]
+
+	while frontier_index < frontier.size() and not parents.has(goal):
+		var current := frontier[frontier_index]
+		frontier_index += 1
+		for direction in directions:
+			var next := current + direction
+			if parents.has(next) or not _path_cell_is_in_bounds(next):
+				continue
+			var current_point := _path_cell_to_world(current, from.y)
+			var next_point := _path_cell_to_world(next, from.y)
+			if not _worker_path_point_is_clear(next_point):
+				continue
+			if not _worker_path_point_is_clear((current_point + next_point) * 0.5):
+				continue
+			parents[next] = current
+			frontier.append(next)
+
+	if not parents.has(goal):
+		return PackedVector3Array()
+
+	var reversed_cells: Array[Vector2i] = []
+	var cell := goal
+	while cell != start:
+		reversed_cells.append(cell)
+		cell = parents[cell]
+	reversed_cells.reverse()
+
+	var route := PackedVector3Array()
+	for path_cell in reversed_cells:
+		var point := _path_cell_to_world(path_cell, from.y)
+		if route.size() < 2:
+			route.append(point)
+			continue
+		var previous_direction := route[-1] - route[-2]
+		var next_direction := point - route[-1]
+		if _cardinal_world_direction(previous_direction) == _cardinal_world_direction(next_direction):
+			route[-1] = point
+		else:
+			route.append(point)
+
+	if route.is_empty() or route[-1].distance_squared_to(to) > 0.0001:
+		route.append(to)
+	return route
+
+
+func _world_to_path_cell(point: Vector3) -> Vector2i:
+	return Vector2i(roundi(point.x / TILE_SIZE), roundi(point.z / TILE_SIZE))
+
+
+func _path_cell_to_world(cell: Vector2i, height: float) -> Vector3:
+	return Vector3(cell.x * TILE_SIZE, height, cell.y * TILE_SIZE)
+
+
+func _path_cell_is_in_bounds(cell: Vector2i) -> bool:
+	var point := _path_cell_to_world(cell, 0.0)
+	return (
+		absf(point.x) <= WORLD_X_HALF - WORKER_PATH_RADIUS
+		and absf(point.z) <= WORLD_Z_HALF - WORKER_PATH_RADIUS
+	)
+
+
+func _worker_path_point_is_clear(point: Vector3) -> bool:
+	var shape := CapsuleShape3D.new()
+	shape.radius = WORKER_PATH_RADIUS
+	shape.height = 1.55
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis.IDENTITY, point + Vector3(0.0, 0.8, 0.0))
+	query.collision_mask = 2
+	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+
+func _position_carried_player(worker: Dictionary) -> void:
+	var body: CharacterBody3D = worker["body"]
+	var carry_offset := Vector3(0.0, CARRIED_BRIEFCASE_HEIGHT, 0.0)
+	if worker["facing"] != &"s":
+		# Move along the pitched camera ray: this changes only draw depth, leaving
+		# the briefcase in the same apparent place in the worker's arms.
+		carry_offset += -camera.global_transform.basis.z * CARRIED_BRIEFCASE_OCCLUSION_DEPTH
+	player.global_position = body.global_position + carry_offset
+
+
 func _worker_that_sees_player() -> Dictionary:
 	for worker in workers:
 		var body: CharacterBody3D = worker["body"]
+		if worker["returning"]:
+			continue
 		var origin := body.global_position + Vector3(0.0, 0.52, 0.0)
 		var target := player.global_position + Vector3(0.0, 0.45, 0.0)
 		var to_player := target - origin
@@ -348,11 +557,16 @@ func _worker_that_sees_player() -> Dictionary:
 
 
 func _begin_carry(worker: Dictionary) -> void:
+	var body: CharacterBody3D = worker["body"]
+	var route := _collision_safe_cardinal_route(body.position, player.position)
+	if route.is_empty():
+		return
 	_play_sfx(SFX_WORKER_ALERT)
 	pickup_worker = worker
-	var body: CharacterBody3D = worker["body"]
-	body.collision_mask = 0
-	pickup_route = _cardinal_route(body.position, player.position)
+	interrupted_patrol_index = worker["index"]
+	excursion_route.clear()
+	excursion_route.append(body.position)
+	pickup_route = route
 	pickup_route_index = 0
 	player.velocity = Vector3.ZERO
 	var approach_direction := pickup_route[0] - body.position
@@ -366,13 +580,19 @@ func _lift_player(worker: Dictionary) -> void:
 	var body: CharacterBody3D = worker["body"]
 	pickup_worker = {}
 	carrying_worker = worker
-	carry_target = _nearest_cubicle_drop_point(player.global_position)
-	carry_route = _cardinal_route(body.position, carry_target)
+	if excursion_route[-1].distance_squared_to(body.position) > 0.0001:
+		excursion_route.append(body.position)
+	var drop := _nearest_reachable_cubicle_drop(body.position, player.global_position)
+	if drop.is_empty():
+		_caught(worker)
+		return
+	carry_target = drop["target"]
+	carry_route = drop["route"]
 	carry_route_index = 0
 	player_collision.disabled = true
-	player.global_position = body.global_position + Vector3(0.0, 0.62, 0.0)
 	var carry_direction := carry_route[0] - body.position
 	_set_worker_animation(worker, &"carry_cross", carry_direction.normalized())
+	_position_carried_player(worker)
 	status_label.text = "PICKED UP"
 
 
@@ -381,13 +601,18 @@ func _finish_carry(worker: Dictionary) -> void:
 	var body: CharacterBody3D = worker["body"]
 	body.position = carry_target
 	body.velocity = Vector3.ZERO
-	body.collision_mask = 2
 	player.position = carry_target
 	player_collision.disabled = false
-	var route: PackedVector3Array = worker["route"]
-	worker["index"] = _nearest_route_point_index(route, body.position)
-	var next_direction := route[worker["index"]] - body.position
-	_set_worker_animation(worker, &"idle", next_direction.normalized())
+	excursion_route.append(carry_target)
+	var return_route := PackedVector3Array()
+	for i in range(excursion_route.size() - 2, -1, -1):
+		return_route.append(excursion_route[i])
+	worker["return_route"] = return_route
+	worker["return_route_index"] = 0
+	worker["resume_index"] = interrupted_patrol_index
+	worker["returning"] = true
+	var return_direction := return_route[0] - body.position
+	_set_worker_animation(worker, &"walk", return_direction.normalized())
 	carrying_worker = {}
 	pickup_route.clear()
 	carry_route.clear()
@@ -395,26 +620,35 @@ func _finish_carry(worker: Dictionary) -> void:
 	status_label.text = ""
 
 
-func _nearest_cubicle_drop_point(from: Vector3) -> Vector3:
-	var nearest := cubicle_drop_points[0]
-	var nearest_distance := from.distance_squared_to(nearest)
+func _finish_return(worker: Dictionary) -> void:
+	var body: CharacterBody3D = worker["body"]
+	body.velocity = Vector3.ZERO
+	body.collision_mask = 2
+	worker["index"] = worker["resume_index"]
+	var route: PackedVector3Array = worker["route"]
+	var patrol_direction := route[worker["index"]] - body.position
+	_set_worker_animation(worker, &"walk", patrol_direction.normalized())
+	worker["returning"] = false
+	worker["return_route"] = PackedVector3Array()
+	worker["return_route_index"] = 0
+
+
+func _nearest_reachable_cubicle_drop(worker_position: Vector3, from: Vector3) -> Dictionary:
+	var nearest := Vector3.ZERO
+	var nearest_route := PackedVector3Array()
+	var nearest_distance := INF
 	for point in cubicle_drop_points:
+		var route := _collision_safe_cardinal_route(worker_position, point)
+		if route.is_empty():
+			continue
 		var distance := from.distance_squared_to(point)
 		if distance < nearest_distance:
 			nearest = point
+			nearest_route = route
 			nearest_distance = distance
-	return nearest
-
-
-func _nearest_route_point_index(route: PackedVector3Array, from: Vector3) -> int:
-	var nearest_index := 0
-	var nearest_distance := INF
-	for i in route.size():
-		var distance := from.distance_squared_to(route[i])
-		if distance < nearest_distance:
-			nearest_index = i
-			nearest_distance = distance
-	return nearest_index
+	if nearest_route.is_empty():
+		return {}
+	return {"target": nearest, "route": nearest_route}
 
 
 func _caught(catching_worker: Dictionary) -> void:
@@ -429,32 +663,33 @@ func _caught(catching_worker: Dictionary) -> void:
 			_set_worker_animation(worker, &"surprised")
 		else:
 			_set_worker_animation(worker, &"idle")
-	status_label.text = "CAUGHT!"
-	status_label.add_theme_color_override("font_color", Color("#ff5d73"))
+	status_label.text = ""
 	await get_tree().create_timer(0.9).timeout
-	_reset_level()
+	result_screen.show_report(false, floor_number)
 
 
 func _reset_level() -> void:
 	if transformation_tween and transformation_tween.is_valid():
 		transformation_tween.kill()
 	transformation_tween = null
-	hidden_mode = false
+	hidden_mode = true
 	is_transforming = false
 	hidden_time = HIDDEN_TIME_MAX
+	starting_disguise = true
 	pickup_worker = {}
 	carrying_worker = {}
 	pickup_route.clear()
 	carry_route.clear()
+	excursion_route.clear()
 	pickup_cooldown = 0.0
 	player.position = START_POSITION
 	player.velocity = Vector3.ZERO
 	player_collision.disabled = false
 	player_facing = &"s"
-	player_sprite.visible = true
+	player_sprite.visible = false
 	player_sprite.modulate = Color.WHITE
 	player_sprite.scale = Vector3.ONE
-	hidden_sprite.visible = false
+	hidden_sprite.visible = true
 	hidden_sprite.modulate = Color.WHITE
 	hidden_sprite.scale = Vector3.ONE
 	_set_player_animation(Vector2.ZERO)
@@ -463,6 +698,9 @@ func _reset_level() -> void:
 		var route: PackedVector3Array = worker["route"]
 		body.position = route[0]
 		worker["index"] = 1
+		worker["returning"] = false
+		worker["return_route"] = PackedVector3Array()
+		worker["return_route_index"] = 0
 		var direction := (route[1] - route[0]).normalized()
 		body.rotation.y = atan2(-direction.x, -direction.z)
 		body.velocity = Vector3.ZERO
@@ -478,11 +716,13 @@ func _reset_level() -> void:
 
 
 func _complete_level() -> void:
+	if level_complete:
+		return
 	_play_sfx(SFX_LEVEL_COMPLETE)
 	level_complete = true
 	player.velocity = Vector3.ZERO
-	status_label.text = "LEVEL COMPLETE"
-	status_label.add_theme_color_override("font_color", Color("#7bf1a8"))
+	status_label.text = ""
+	result_screen.show_report(true, floor_number)
 
 
 func _build_world() -> void:
@@ -513,7 +753,7 @@ func _build_world() -> void:
 	_add_room_flooring()
 	_add_room_partitions()
 	_add_office_furniture()
-	_add_start_and_exit()
+	_add_exit()
 	_build_potions()
 
 
@@ -528,20 +768,46 @@ func _add_room_flooring() -> void:
 	var outer_z := 6.7
 
 	# Repeated materials sit diagonally rather than sharing an edge.
-	_add_floor_zone(Vector3(left_x, 0.0, outer_z), Vector2(room_width, outer_room_depth), FLOOR_LINOLEUM)
-	_add_floor_zone(Vector3(right_x, 0.0, outer_z), Vector2(room_width, outer_room_depth), FLOOR_CARPET_BLUE_GREY)
+	_add_floor_zone(
+		Vector3(left_x, 0.0, outer_z),
+		Vector2(room_width, outer_room_depth),
+		FLOOR_VINYL_CHARCOAL,
+		3.2
+	)
+	_add_floor_zone(
+		Vector3(right_x, 0.0, outer_z),
+		Vector2(room_width, outer_room_depth),
+		FLOOR_CARPET_BLUE_GREY,
+		4.0
+	)
 	_add_floor_zone(Vector3(left_x, 0.0, 0.0), Vector2(room_width, middle_room_depth), FLOOR_WOOD)
-	_add_floor_zone(Vector3(right_x, 0.0, 0.0), Vector2(room_width, middle_room_depth), FLOOR_CARPET_TEAL)
-	_add_floor_zone(Vector3(left_x, 0.0, -outer_z), Vector2(room_width, outer_room_depth), FLOOR_CARPET_BLUE_GREY)
+	_add_floor_zone(
+		Vector3(right_x, 0.0, 0.0),
+		Vector2(room_width, middle_room_depth),
+		FLOOR_CARPET_TEAL,
+		4.0
+	)
+	_add_floor_zone(
+		Vector3(left_x, 0.0, -outer_z),
+		Vector2(room_width, outer_room_depth),
+		FLOOR_CARPET_BLUE_GREY,
+		4.0
+	)
 	_add_floor_zone(Vector3(right_x, 0.0, -outer_z), Vector2(room_width, outer_room_depth), FLOOR_WOOD)
 
 
-func _add_floor_zone(at: Vector3, size: Vector2, texture: Texture2D) -> void:
+func _add_floor_zone(
+	at: Vector3,
+	size: Vector2,
+	texture: Texture2D,
+	texture_world_size := 8.0,
+	surface_y := 0.008
+) -> void:
 	var floor := MeshInstance3D.new()
 	var floor_mesh := PlaneMesh.new()
 	floor_mesh.size = size
 	floor.mesh = floor_mesh
-	floor.position = at + Vector3(0.0, 0.008, 0.0)
+	floor.position = at + Vector3(0.0, surface_y, 0.0)
 
 	var floor_material := StandardMaterial3D.new()
 	floor_material.albedo_texture = texture
@@ -549,7 +815,11 @@ func _add_floor_zone(at: Vector3, size: Vector2, texture: Texture2D) -> void:
 	# cones. The neutral tint also ties the different room materials together.
 	floor_material.albedo_color = FLOOR_TINT
 	floor_material.roughness = 0.95
-	floor_material.uv1_scale = Vector3(size.x / 8.0, size.y / 8.0, 1.0)
+	# One texture repeat should be furniture-scale, not room-scale. Vinyl uses
+	# smaller slabs, carpet uses medium modules, and wood keeps longer boards.
+	floor_material.uv1_scale = Vector3(
+		size.x / texture_world_size, size.y / texture_world_size, 1.0
+	)
 	floor.material_override = floor_material
 	add_child(floor)
 
@@ -599,8 +869,21 @@ func _add_room_wall_segment_z(x: float, from_z: float, to_z: float) -> void:
 
 
 func _add_low_room_wall(at: Vector3, size: Vector3) -> void:
+	var footprint_tiles := Vector2i(
+		maxi(1, roundi(size.x / TILE_SIZE)),
+		maxi(1, roundi(size.z / TILE_SIZE))
+	)
+	# Room-wall endpoints are authored around doorways, then their spans are
+	# quantized here so every resulting divider covers a whole number of tiles.
+	size = Vector3(
+		footprint_tiles.x * TILE_SIZE if footprint_tiles.x > 1 else DIVIDER_THICKNESS,
+		TILE_SIZE,
+		footprint_tiles.y * TILE_SIZE if footprint_tiles.y > 1 else DIVIDER_THICKNESS
+	)
 	var body := StaticBody3D.new()
 	body.position = at
+	body.set_meta("tile_footprint", footprint_tiles)
+	body.set_meta("tile_height", 1)
 	body.collision_layer = 2
 	body.collision_mask = 0
 	add_child(body)
@@ -625,36 +908,63 @@ func _add_office_furniture() -> void:
 	var rows := [5.0, 0.0, -5.0]
 	for row_index in rows.size():
 		for column_index in columns.size():
-			var opens_positive_z := (row_index + column_index) % 2 == 0
+			# Outer-row entrances must face away from the adjacent room wall or the
+			# divider seals the cubicle. Only the unobstructed middle row alternates.
+			var opens_positive_z := row_index == 0
+			if row_index > 0 and row_index < rows.size() - 1:
+				opens_positive_z = (row_index + column_index) % 2 == 0
 			_add_cubicle(Vector3(columns[column_index], 0.0, rows[row_index]), opens_positive_z)
 
-	_add_partition(Vector3(-12.1, 0.0, 3.8), Vector3(0.18, 1.4, 4.2))
-	_add_partition(Vector3(12.1, 0.0, -3.8), Vector3(0.18, 1.4, 4.2))
-	_add_partition(Vector3(-8.4, 0.0, -8.7), Vector3(3.2, 1.4, 0.18))
-	_add_partition(Vector3(9.0, 0.0, 8.7), Vector3(4.0, 1.4, 0.18))
+	_add_partition_tiles(Vector3(-12.0, 0.0, 4.0), Vector2i(1, 8), 3)
+	_add_partition_tiles(Vector3(12.0, 0.0, -4.0), Vector2i(1, 8), 3)
+	_add_partition_tiles(Vector3(-8.5, 0.0, -8.5), Vector2i(6, 1), 3)
+	_add_partition_tiles(Vector3(9.0, 0.0, 8.5), Vector2i(8, 1), 3)
 
-	# Keep storage against room boundaries so it reads as intentional office
-	# furniture rather than as an obstacle abandoned in an open walkway.
-	_add_cabinet(Vector3(-13.7, 0.0, -2.35))
-	_add_cabinet(Vector3(13.7, 0.0, 2.35))
-	_add_plant(Vector3(-13.5, 0.0, -8.6))
-	_add_plant(Vector3(13.1, 0.0, 8.5))
-	_add_plant(Vector3(-0.8, 0.0, -9.0))
+	# Depth-stacked banks use a one-tile contact stride. The foreground cabinet
+	# is drawn last so it hides the bodies behind it, leaving a readable run of
+	# cabinet tops instead of four complete side silhouettes.
+	_add_cabinet_stack(-14.5, -0.75, 4, StaticPropFacing.EAST)
+	_add_cabinet_stack(14.5, -0.5, 3, StaticPropFacing.WEST)
 
-	_add_partition(Vector3(0.0, 0.0, -10.05), Vector3(30.2, 0.45, 0.16), Color("#d7e0e8"))
-	_add_partition(Vector3(0.0, 0.0, 10.05), Vector3(30.2, 0.45, 0.16), Color("#d7e0e8"))
-	_add_partition(Vector3(-15.05, 0.0, 0.0), Vector3(0.16, 0.45, 20.2), Color("#d7e0e8"))
-	_add_partition(Vector3(15.05, 0.0, 0.0), Vector3(0.16, 0.45, 20.2), Color("#d7e0e8"))
+	# A front-facing pair backs directly onto the central room boundary, with
+	# enough clearance from the nearby cubicle and vending-machine footprint.
+	for cabinet_x in [12.0, 13.5]:
+		_add_cabinet(Vector3(cabinet_x, 0.0, 3.9), StaticPropFacing.SOUTH)
+	# Decorative plants that were already in perimeter bays sit flush by their
+	# base footprint instead of floating a partial tile away from the wall.
+	_add_plant(Vector3(13.0, 0.0, 9.5))
+	_add_plant(Vector3(-1.0, 0.0, -9.5))
+	_add_plant(Vector3(-1.0, 0.0, 9.5))
+
+	# Extra office amenities sit against perimeter walls, preserving the central
+	# routes and the screen-aligned movement lanes.
+	# The bottom-left printer backs onto that room's north wall and faces down
+	# (south) into the room. The upper-right printer is flush to the east wall.
+	_add_printer(Vector3(-13.5, 0.0, 3.9), StaticPropFacing.SOUTH)
+	_add_printer(Vector3(14.5, 0.0, -5.0), StaticPropFacing.WEST)
+	_add_vending_machine(
+		Vector3(14.5, 0.0, 5.5), Color.WHITE, StaticPropFacing.WEST
+	)
+	_add_vending_machine(
+		Vector3(13.75, 0.0, -2.8), Color.WHITE, StaticPropFacing.SOUTH
+	)
+	_add_bathroom()
+
+	_add_partition_tiles(Vector3(0.0, 0.0, -10.05), Vector2i(60, 1), 1, Color("#d7e0e8"))
+	_add_partition_tiles(Vector3(0.0, 0.0, 10.05), Vector2i(60, 1), 1, Color("#d7e0e8"))
+	_add_partition_tiles(Vector3(-15.05, 0.0, 0.0), Vector2i(1, 40), 1, Color("#d7e0e8"))
+	_add_partition_tiles(Vector3(15.05, 0.0, 0.0), Vector2i(1, 40), 1, Color("#d7e0e8"))
 
 
 func _add_cubicle(at: Vector3, opens_positive_z: bool) -> void:
 	var opening_sign := 1.0 if opens_positive_z else -1.0
-	var back_z := at.z - opening_sign * 1.3
-	_add_partition(Vector3(at.x, 0.0, back_z), Vector3(2.8, 1.35, 0.14), Color("#78909c"))
-	_add_partition(Vector3(at.x - 1.33, 0.0, at.z), Vector3(0.14, 1.35, 2.7), Color("#78909c"))
-	_add_partition(Vector3(at.x + 1.33, 0.0, at.z), Vector3(0.14, 1.35, 2.7), Color("#78909c"))
-	_add_desk(Vector3(at.x, 0.0, at.z - opening_sign * 0.62))
-	cubicle_drop_points.append(at + Vector3(0.0, 0.0, opening_sign * 0.72))
+	var back_z := at.z - opening_sign * 1.5
+	_add_partition_tiles(Vector3(at.x, 0.0, back_z), Vector2i(6, 1), 3, Color("#78909c"))
+	_add_partition_tiles(Vector3(at.x - 1.5, 0.0, at.z), Vector2i(1, 6), 3, Color("#78909c"))
+	_add_partition_tiles(Vector3(at.x + 1.5, 0.0, at.z), Vector2i(1, 6), 3, Color("#78909c"))
+	var desk_facing := StaticPropFacing.SOUTH if opens_positive_z else StaticPropFacing.NORTH
+	_add_desk(Vector3(at.x, 0.0, at.z - opening_sign * TILE_SIZE), desk_facing)
+	cubicle_drop_points.append(at + Vector3(0.0, 0.0, opening_sign * TILE_SIZE * 2.0))
 
 
 func _build_potions() -> void:
@@ -695,31 +1005,29 @@ func _collect_nearby_potion() -> void:
 			return
 
 
-func _add_desk(at: Vector3) -> void:
-	var body := StaticBody3D.new()
-	body.position = at
-	body.collision_layer = 2
-	body.collision_mask = 0
-	add_child(body)
-
-	var collision := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.15, 0.9, 1.05)
-	collision.shape = shape
-	collision.position.y = 0.45
-	body.add_child(collision)
-
-	_add_prop_sprite(
-		# The source image has generous transparent padding below the desk.
-		# Centre it lower so the illustrated feet meet the floor instead of
-		# making the workstation appear to perch on top of the divider.
-		body, WORKSTATION_TEXTURE, Vector3(0.0, 0.5, 0.0), Vector2(2.5, 1.55)
+func _add_desk(at: Vector3, facing: StaticPropFacing) -> void:
+	_add_oriented_static_prop(
+		at, WORKSTATION_TILES, WORKSTATION_TEXTURE, "workstation", facing
 	)
 
 
-func _add_partition(at: Vector3, size: Vector3, color := Color("#607d8b")) -> void:
+func _add_partition_tiles(
+	at: Vector3,
+	footprint_tiles: Vector2i,
+	height_tiles: int,
+	color := Color("#607d8b")
+) -> void:
+	assert(footprint_tiles.x == 1 or footprint_tiles.y == 1)
+	assert(height_tiles > 0)
+	var size := Vector3(
+		footprint_tiles.x * TILE_SIZE if footprint_tiles.x > 1 else DIVIDER_THICKNESS,
+		height_tiles * TILE_SIZE,
+		footprint_tiles.y * TILE_SIZE if footprint_tiles.y > 1 else DIVIDER_THICKNESS
+	)
 	var body := StaticBody3D.new()
 	body.position = at
+	body.set_meta("tile_footprint", footprint_tiles)
+	body.set_meta("tile_height", height_tiles)
 	body.collision_layer = 2
 	body.collision_mask = 0
 	add_child(body)
@@ -755,35 +1063,208 @@ func _add_divider_face(body: StaticBody3D, size: Vector3) -> void:
 	body.add_child(face)
 
 
-func _add_cabinet(at: Vector3) -> void:
-	var body := StaticBody3D.new()
-	body.position = at
-	body.collision_layer = 2
-	body.collision_mask = 0
-	add_child(body)
-	var collision := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(0.75, 1.65, 1.6)
-	collision.shape = shape
-	collision.position.y = 0.825
-	body.add_child(collision)
-
-	_add_prop_sprite(
-		body, FILING_CABINET_TEXTURE, Vector3(0.0, 0.9, 0.0), Vector2(1.35, 1.85)
+func _add_cabinet(
+	at: Vector3, facing: StaticPropFacing, render_priority := 0
+) -> void:
+	var body := _add_oriented_static_prop(
+		at, FILING_CABINET_TILES, FILING_CABINET_TEXTURE, "filing-cabinet", facing
 	)
+	var sprite := body.get_child(body.get_child_count() - 1) as Sprite3D
+	sprite.render_priority = render_priority
+
+
+func _add_cabinet_stack(
+	x: float, center_z: float, count: int, facing: StaticPropFacing
+) -> void:
+	assert(count > 0)
+	var first_z := center_z - FILING_CABINET_STACK_STRIDE * float(count - 1) * 0.5
+	for index in count:
+		var cabinet_z := first_z + FILING_CABINET_STACK_STRIDE * index
+		# The camera sits on positive Z, so increasing Z is foreground. Explicit
+		# priority keeps that occlusion deterministic for transparent billboards.
+		_add_cabinet(Vector3(x, 0.0, cabinet_z), facing, index)
 
 
 func _add_plant(at: Vector3) -> void:
-	var plant := Node3D.new()
-	plant.position = at
-	add_child(plant)
-	_add_prop_sprite(
-		plant, OFFICE_PLANT_TEXTURE, Vector3(0.0, 0.72, 0.0), Vector2(1.35, 1.45)
+	_add_static_prop(at, OFFICE_PLANT_TILES, OFFICE_PLANT_TEXTURE)
+
+
+func _add_printer(at: Vector3, facing: StaticPropFacing) -> void:
+	_add_oriented_static_prop(
+		at, OFFICE_PRINTER_TILES, OFFICE_PRINTER_TEXTURE, "office-printer", facing
 	)
 
 
-func _add_start_and_exit() -> void:
-	_add_floor_marker(START_POSITION, Color(0.25, 0.55, 1.0, 0.42))
+func _add_vending_machine(
+	at: Vector3, tint: Color, facing: StaticPropFacing
+) -> void:
+	var body := _add_oriented_static_prop(
+		at, VENDING_MACHINE_TILES, VENDING_MACHINE_TEXTURE, "vending-machine", facing
+	)
+	var sprite := body.get_child(body.get_child_count() - 1) as Sprite3D
+	sprite.modulate = tint
+
+
+func _add_bathroom() -> void:
+	# The bathroom gets washable vinyl over the room carpet. It sits slightly
+	# above the room flooring so the two planes do not flicker in the browser.
+	_add_floor_zone(
+		Vector3(-12.75, 0.0, -8.25),
+		Vector2(4.5, 3.5),
+		FLOOR_VINYL_CHARCOAL,
+		2.0,
+		0.014
+	)
+
+	# The outer level walls form the north and west edges. A centred east-side
+	# doorway opens into the aisle between the sink and three toilet stalls.
+	_add_partition_tiles(Vector3(-12.75, 0.0, -6.5), Vector2i(9, 1), 3, Color("#86a9ac"))
+	_add_partition_tiles(Vector3(-10.5, 0.0, -9.5), Vector2i(1, 2), 3, Color("#86a9ac"))
+	_add_partition_tiles(Vector3(-10.5, 0.0, -7.0), Vector2i(1, 2), 3, Color("#86a9ac"))
+
+	# Keep the vanity parallel to, and just clear of, the north perimeter wall.
+	_add_oriented_static_prop(
+		Vector3(-12.75, 0.0, -9.3),
+		BATHROOM_SINKS_TILES,
+		BATHROOM_SINKS_TEXTURE,
+		"bathroom-sinks",
+		StaticPropFacing.SOUTH
+	)
+
+	# Full-depth side panels separate the three stalls; their open fronts face
+	# the aisle so each fixture and the nearby potion remain readable.
+	_add_partition_tiles(Vector3(-13.5, 0.0, -7.25), Vector2i(1, 3), 3, Color("#9ab9bb"))
+	_add_partition_tiles(Vector3(-12.0, 0.0, -7.25), Vector2i(1, 3), 3, Color("#9ab9bb"))
+	for toilet_x in [-14.25, -12.75, -11.25]:
+		_add_oriented_static_prop(
+			Vector3(toilet_x, 0.0, -7.1),
+			BATHROOM_TOILET_TILES,
+			BATHROOM_TOILET_TEXTURE,
+			"bathroom-toilet",
+			StaticPropFacing.NORTH
+		)
+
+
+func _add_static_prop(
+	at: Vector3,
+	size_tiles: Vector3i,
+	texture: Texture2D,
+	rotate_footprint := false
+) -> StaticBody3D:
+	assert(size_tiles.x > 0 and size_tiles.y > 0 and size_tiles.z > 0)
+	var footprint_tiles := _prop_footprint_tiles(size_tiles, rotate_footprint)
+	var collision_size := _prop_collision_size(footprint_tiles, size_tiles.y)
+	var visible_size := _projected_prop_size(size_tiles)
+	var body := StaticBody3D.new()
+	body.position = at
+	body.set_meta("tile_size", size_tiles)
+	# Layout and adjacency use only the contact area on the floor. The illustrated
+	# height remains free to overlap the transparent upper area of nearby props.
+	body.set_meta("tile_footprint", footprint_tiles)
+	body.set_meta("tile_height", size_tiles.y)
+	body.set_meta("footprint_rotated", rotate_footprint)
+	body.collision_layer = 2
+	body.collision_mask = 0
+	add_child(body)
+
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = collision_size
+	collision.shape = shape
+	collision.position.y = collision_size.y * 0.5
+	body.add_child(collision)
+	_add_prop_sprite(body, texture, Vector3(0.0, visible_size.y * 0.5, 0.0), visible_size)
+	return body
+
+
+func _add_directional_static_prop(
+	at: Vector3,
+	size_tiles: Vector3i,
+	directional_textures: Array[Texture2D],
+	facing: StaticPropFacing
+) -> StaticBody3D:
+	# Billboard yaw is camera-controlled, so cardinal facing comes from artwork
+	# drawn for that view. Texture order matches SOUTH, EAST, NORTH, WEST above.
+	assert(directional_textures.size() == 4)
+	var quarter_turns := int(facing)
+	var oriented_tiles := size_tiles
+	if quarter_turns % 2 == 1:
+		oriented_tiles = Vector3i(size_tiles.z, size_tiles.y, size_tiles.x)
+	var body := _add_static_prop(
+		at,
+		oriented_tiles,
+		directional_textures[quarter_turns]
+	)
+	body.set_meta("source_tile_size", size_tiles)
+	body.set_meta("prop_facing", quarter_turns)
+	return body
+
+
+func _add_oriented_static_prop(
+	at: Vector3,
+	size_tiles: Vector3i,
+	south_texture: Texture2D,
+	asset_name: String,
+	facing: StaticPropFacing
+) -> StaticBody3D:
+	var directional_textures := _load_directional_prop_textures(asset_name, south_texture)
+	if directional_textures.size() == 4:
+		return _add_directional_static_prop(at, size_tiles, directional_textures, facing)
+	# Preserve the legacy footprint and undistorted south-facing art until the
+	# complete generated rotation set has been installed.
+	return _add_static_prop(
+		at,
+		size_tiles,
+		south_texture,
+		int(facing) % 2 == 1
+	)
+
+
+func _load_directional_prop_textures(
+	asset_name: String, south_texture: Texture2D
+) -> Array[Texture2D]:
+	var textures: Array[Texture2D] = [south_texture]
+	for direction in ["east", "north", "west"]:
+		var path := "res://assets/scenery/generated/%s-%s.png" % [asset_name, direction]
+		if not ResourceLoader.exists(path):
+			return []
+		var texture := load(path) as Texture2D
+		if texture == null:
+			return []
+		textures.append(texture)
+	return textures
+
+
+func _prop_footprint_tiles(size_tiles: Vector3i, rotate_footprint: bool) -> Vector2i:
+	var footprint := Vector2i(size_tiles.x, size_tiles.z)
+	if rotate_footprint:
+		footprint = Vector2i(footprint.y, footprint.x)
+	return footprint
+
+
+func _prop_collision_size(footprint_tiles: Vector2i, height_tiles: int) -> Vector3:
+	# Collision rises from the base footprint, but its height never contributes to
+	# row spacing. This keeps tall cabinets and machines tileable by their feet.
+	return Vector3(
+		footprint_tiles.x * TILE_SIZE,
+		height_tiles * TILE_SIZE,
+		footprint_tiles.y * TILE_SIZE
+	)
+
+
+func _projected_prop_size(size_tiles: Vector3i) -> Vector2:
+	# Map physical height and depth into the billboard plane using the exact
+	# camera pitch. This keeps a deep toilet, shallow cabinet, and tall vending
+	# machine on one consistent orthographic projection instead of eye-sized art.
+	var pitch_length := Vector2(CAMERA_OFFSET.y, CAMERA_OFFSET.z).length()
+	var projected_height := (
+		size_tiles.y * TILE_SIZE * CAMERA_OFFSET.z / pitch_length
+		+ size_tiles.z * TILE_SIZE * CAMERA_OFFSET.y / pitch_length
+	)
+	return Vector2(size_tiles.x * TILE_SIZE, projected_height)
+
+
+func _add_exit() -> void:
 	_add_floor_marker(EXIT_POSITION, Color(0.2, 1.0, 0.48, 0.48))
 	_add_exit_sign(EXIT_POSITION)
 
@@ -798,11 +1279,6 @@ func _add_exit_sign(at: Vector3) -> void:
 
 
 func _add_floor_marker(at: Vector3, color: Color) -> void:
-	if color.b > color.g:
-		_add_prop_sprite(
-			self, START_ZONE_TEXTURE, at + Vector3(0.0, 0.22, 0.0), Vector2(1.35, 1.35)
-		)
-		return
 	var outline := MeshInstance3D.new()
 	var outline_mesh := CylinderMesh.new()
 	outline_mesh.top_radius = 0.79
@@ -845,20 +1321,21 @@ func _build_player() -> void:
 	player_sprite.name = "AnimatedBriefcase"
 	player_sprite.sprite_frames = _create_briefcase_sprite_frames()
 	player_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	player_sprite.position.y = 0.78
-	player_sprite.pixel_size = 0.0048
+	player_sprite.position.y = 0.69
+	player_sprite.pixel_size = BRIEFCASE_SPRITE_PIXEL_SIZE
 	player_sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	player.add_child(player_sprite)
 	player_sprite.play(&"idle_s")
+	player_sprite.visible = false
 
 	hidden_sprite = Sprite3D.new()
 	hidden_sprite.name = "HiddenBriefcase"
 	hidden_sprite.texture = HIDDEN_BRIEFCASE_TEXTURE
 	hidden_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	hidden_sprite.position.y = 0.78
-	hidden_sprite.pixel_size = 0.0048
+	hidden_sprite.position.y = 0.69
+	hidden_sprite.pixel_size = BRIEFCASE_SPRITE_PIXEL_SIZE
 	hidden_sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
-	hidden_sprite.visible = false
+	hidden_sprite.visible = true
 	player.add_child(hidden_sprite)
 
 
@@ -867,9 +1344,12 @@ func _set_hidden_mode(to_hidden: bool) -> void:
 		return
 	if hidden_mode == to_hidden:
 		return
+	if not to_hidden:
+		starting_disguise = false
 
 	_play_sfx(SFX_DISGUISE_ON if to_hidden else SFX_DISGUISE_OFF)
 	hidden_mode = to_hidden
+	_update_hidden_time_hud()
 	is_transforming = true
 	if transformation_tween and transformation_tween.is_valid():
 		transformation_tween.kill()
@@ -900,6 +1380,9 @@ func _finish_transform_animation(to_hidden: bool) -> void:
 	player_sprite.scale = Vector3.ONE
 	hidden_sprite.scale = Vector3.ONE
 	is_transforming = false
+	if opening_animation_active and not to_hidden:
+		opening_animation_active = false
+		pause_controller.input_enabled = true
 
 
 func _create_briefcase_sprite_frames() -> SpriteFrames:
@@ -932,8 +1415,39 @@ func _create_briefcase_sprite_frames() -> SpriteFrames:
 
 
 func _build_workers() -> void:
+	_validate_worker_room_coverage()
 	for i in worker_routes.size():
 		_add_worker(worker_routes[i], WORKER_ATLASES[i])
+
+
+func _validate_worker_room_coverage() -> void:
+	assert(worker_routes.size() == WORKER_ATLASES.size())
+	var staffed_rooms := {}
+	for route in worker_routes:
+		assert(route.size() >= 2)
+		var route_length := 0.0
+		for point_index in route.size():
+			var point := route[point_index]
+			var next_point := route[(point_index + 1) % route.size()]
+			var segment := next_point - point
+			assert(
+				is_zero_approx(segment.x) or is_zero_approx(segment.z),
+				"Worker patrol legs must remain cardinal."
+			)
+			route_length += segment.length()
+			staffed_rooms[_room_for_position(point)] = true
+		assert(route_length >= 20.0, "Worker patrol routes must use long loops.")
+	assert(staffed_rooms.size() == 6, "Worker patrols must visit every office room.")
+
+
+func _room_for_position(position: Vector3) -> Vector2i:
+	var column := 0 if position.x < 0.0 else 1
+	var row := 0
+	if position.z > 3.33:
+		row = 2
+	elif position.z >= -3.33:
+		row = 1
+	return Vector2i(column, row)
 
 
 func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
@@ -955,10 +1469,10 @@ func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
 	sprite.name = "AnimatedWorker"
 	sprite.sprite_frames = WorkerFrames.create(atlas)
 	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	# Keep the illustrated worker consistent with the 1.55-unit collision body
-	# and a little taller than the nearby 0.9-unit desks. The source frames are
-	# almost fully occupied, so this offset leaves their ground shadow at y=0.
-	sprite.position.y = 0.82
+	# The cartoon workers have broad, oversized heads, so a slightly smaller
+	# footprint keeps them from overpowering the office furniture. The source
+	# frames are almost fully occupied; this offset keeps their shadow grounded.
+	sprite.position.y = 0.75
 	sprite.pixel_size = WORKER_SPRITE_PIXEL_SIZE
 	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 	body.add_child(sprite)
@@ -975,6 +1489,10 @@ func _add_worker(route: PackedVector3Array, atlas: Texture2D) -> void:
 		"sprite": sprite,
 		"facing": _worker_direction_name(direction),
 		"state": &"walk",
+		"returning": false,
+		"return_route": PackedVector3Array(),
+		"return_route_index": 0,
+		"resume_index": 1,
 	}
 	workers.append(worker)
 	_set_worker_animation(worker, &"walk", direction)
@@ -1085,6 +1603,9 @@ func _snap_camera_to_player() -> void:
 
 func _camera_focus() -> Vector3:
 	var focus := player.position
+	if not carrying_worker.is_empty():
+		var carrying_body: CharacterBody3D = carrying_worker["body"]
+		focus = carrying_body.position
 	# Carrying raises the briefcase visually, but the camera should continue to
 	# track its floor position so pickup and drop-off do not bump the view.
 	focus.y = 0.0
@@ -1098,81 +1619,82 @@ func _camera_focus() -> Vector3:
 func _build_hud() -> void:
 	gameplay_hud = CanvasLayer.new()
 	add_child(gameplay_hud)
-	add_child(PauseController.new())
-
-	var panel := PanelContainer.new()
-	panel.position = Vector2(20.0, 20.0)
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.04, 0.055, 0.09, 0.9)
-	panel_style.corner_radius_top_left = 12
-	panel_style.corner_radius_top_right = 12
-	panel_style.corner_radius_bottom_left = 12
-	panel_style.corner_radius_bottom_right = 12
-	panel_style.content_margin_left = 18.0
-	panel_style.content_margin_right = 18.0
-	panel_style.content_margin_top = 14.0
-	panel_style.content_margin_bottom = 14.0
-	panel.add_theme_stylebox_override("panel", panel_style)
-	gameplay_hud.add_child(panel)
-
-	var copy := VBoxContainer.new()
-	panel.add_child(copy)
-	var title := Label.new()
-	title.text = "BRIEFCASE: OFFICE ESCAPE"
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color("#ffd166"))
-	copy.add_child(title)
-	var objective := Label.new()
-	objective.text = "Reach EXIT without entering a vision cone\nWASD / arrows: move    Space: disguise    P: pause"
-	objective.add_theme_font_size_override("font_size", 15)
-	objective.add_theme_color_override("font_color", Color("#e8eefc"))
-	copy.add_child(objective)
+	pause_controller = PauseController.new()
+	add_child(pause_controller)
+	result_screen = ResultScreen.new()
+	add_child(result_screen)
 
 	var disguise_panel := PanelContainer.new()
 	disguise_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	disguise_panel.position = Vector2(-190.0, 18.0)
-	disguise_panel.size = Vector2(380.0, 58.0)
-	var disguise_style := StyleBoxFlat.new()
-	disguise_style.bg_color = Color(0.04, 0.055, 0.09, 0.9)
-	disguise_style.corner_radius_top_left = 10
-	disguise_style.corner_radius_top_right = 10
-	disguise_style.corner_radius_bottom_left = 10
-	disguise_style.corner_radius_bottom_right = 10
-	disguise_style.content_margin_left = 12.0
-	disguise_style.content_margin_right = 12.0
-	disguise_style.content_margin_top = 7.0
-	disguise_style.content_margin_bottom = 7.0
-	disguise_panel.add_theme_stylebox_override("panel", disguise_style)
+	disguise_panel.position = Vector2(-180.0, 18.0)
+	disguise_panel.size = Vector2(360.0, 62.0)
+	disguise_panel_style = StyleBoxFlat.new()
+	disguise_panel_style.bg_color = Color("#18262e")
+	disguise_panel_style.border_color = Color("#6f8089")
+	disguise_panel_style.set_border_width_all(3)
+	disguise_panel_style.corner_radius_top_left = 8
+	disguise_panel_style.corner_radius_top_right = 8
+	disguise_panel_style.corner_radius_bottom_left = 8
+	disguise_panel_style.corner_radius_bottom_right = 8
+	disguise_panel_style.content_margin_left = 10.0
+	disguise_panel_style.content_margin_right = 10.0
+	disguise_panel_style.content_margin_top = 6.0
+	disguise_panel_style.content_margin_bottom = 8.0
+	disguise_panel.add_theme_stylebox_override("panel", disguise_panel_style)
 	gameplay_hud.add_child(disguise_panel)
 
 	var disguise_copy := VBoxContainer.new()
-	disguise_copy.add_theme_constant_override("separation", 2)
+	disguise_copy.add_theme_constant_override("separation", 4)
 	disguise_panel.add_child(disguise_copy)
+	var disguise_header := HBoxContainer.new()
+	disguise_header.add_theme_constant_override("separation", 8)
+	disguise_copy.add_child(disguise_header)
 	hidden_time_label = Label.new()
-	hidden_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hidden_time_label.add_theme_font_size_override("font_size", 14)
-	hidden_time_label.add_theme_color_override("font_color", Color("#bdf8ff"))
-	disguise_copy.add_child(hidden_time_label)
+	hidden_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hidden_time_label.add_theme_font_size_override("font_size", 13)
+	hidden_time_label.add_theme_color_override("font_color", Color("#dce7e3"))
+	disguise_header.add_child(hidden_time_label)
+	hidden_time_seconds_label = Label.new()
+	hidden_time_seconds_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hidden_time_seconds_label.add_theme_font_size_override("font_size", 13)
+	hidden_time_seconds_label.add_theme_color_override("font_color", Color("#dce7e3"))
+	disguise_header.add_child(hidden_time_seconds_label)
 	hidden_time_bar = ProgressBar.new()
 	hidden_time_bar.min_value = 0.0
 	hidden_time_bar.max_value = HIDDEN_TIME_MAX
 	hidden_time_bar.show_percentage = false
-	hidden_time_bar.custom_minimum_size = Vector2(356.0, 16.0)
-	var bar_background := StyleBoxFlat.new()
-	bar_background.bg_color = Color("#26364d")
-	bar_background.corner_radius_top_left = 7
-	bar_background.corner_radius_top_right = 7
-	bar_background.corner_radius_bottom_left = 7
-	bar_background.corner_radius_bottom_right = 7
-	var bar_fill := StyleBoxFlat.new()
-	bar_fill.bg_color = Color("#41d9e8")
-	bar_fill.corner_radius_top_left = 7
-	bar_fill.corner_radius_top_right = 7
-	bar_fill.corner_radius_bottom_left = 7
-	bar_fill.corner_radius_bottom_right = 7
-	hidden_time_bar.add_theme_stylebox_override("background", bar_background)
-	hidden_time_bar.add_theme_stylebox_override("fill", bar_fill)
+	hidden_time_bar.custom_minimum_size = Vector2(334.0, 15.0)
+	hidden_time_bar_background = StyleBoxFlat.new()
+	hidden_time_bar_background.bg_color = Color("#354650")
+	hidden_time_bar_background.border_color = Color("#0c151a")
+	hidden_time_bar_background.set_border_width_all(2)
+	hidden_time_bar_background.corner_radius_top_left = 3
+	hidden_time_bar_background.corner_radius_top_right = 3
+	hidden_time_bar_background.corner_radius_bottom_left = 3
+	hidden_time_bar_background.corner_radius_bottom_right = 3
+	hidden_time_bar_fill = StyleBoxFlat.new()
+	hidden_time_bar_fill.bg_color = Color("#d9b65e")
+	hidden_time_bar_fill.corner_radius_top_left = 2
+	hidden_time_bar_fill.corner_radius_top_right = 2
+	hidden_time_bar_fill.corner_radius_bottom_left = 2
+	hidden_time_bar_fill.corner_radius_bottom_right = 2
+	hidden_time_bar.add_theme_stylebox_override("background", hidden_time_bar_background)
+	hidden_time_bar.add_theme_stylebox_override("fill", hidden_time_bar_fill)
 	disguise_copy.add_child(hidden_time_bar)
+	for segment_index in range(1, 10):
+		var divider := ColorRect.new()
+		var segment_anchor := float(segment_index) / 10.0
+		divider.set_anchor(SIDE_LEFT, segment_anchor)
+		divider.set_anchor(SIDE_TOP, 0.0)
+		divider.set_anchor(SIDE_RIGHT, segment_anchor)
+		divider.set_anchor(SIDE_BOTTOM, 1.0)
+		divider.offset_left = -1.0
+		divider.offset_top = 2.0
+		divider.offset_right = 1.0
+		divider.offset_bottom = -2.0
+		divider.color = Color(0.04, 0.08, 0.09, 0.45)
+		divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hidden_time_bar.add_child(divider)
 
 	status_label = Label.new()
 	status_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -1209,7 +1731,6 @@ func _build_audio() -> void:
 	add_child(sfx_player)
 
 	music_player.play()
-	office_ambience_player.play()
 
 
 func _play_sfx(stream: AudioStream) -> void:
@@ -1237,18 +1758,68 @@ func _start_first_level() -> void:
 		title_screen.queue_free()
 	title_screen = null
 	_reset_level()
+	office_ambience_player.play()
 	_play_sfx(SFX_GAME_START)
+	_begin_opening_animation()
+
+
+func _continue_from_result() -> void:
+	var advancing := level_complete
+	result_screen.hide_report()
+	if advancing:
+		floor_number += 1
+	level_complete = false
+	_reset_level()
+	_play_sfx(SFX_GAME_START)
+	_begin_opening_animation()
+
+
+func _begin_opening_animation() -> void:
+	opening_animation_active = true
+	pause_controller.input_enabled = false
+	player.velocity = Vector3.ZERO
+	_set_player_animation(Vector2.ZERO)
+	await get_tree().create_timer(OPENING_DISGUISE_DELAY).timeout
+	if not opening_animation_active or not hidden_mode:
+		return
+	_set_hidden_mode(false)
+
+
+func _is_start_event(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		return event.pressed and not event.echo and event.keycode in [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]
+	if event is InputEventJoypadButton:
+		return event.pressed and event.button_index == JOY_BUTTON_START
+	return false
 
 
 func _update_hidden_time_hud() -> void:
 	if not hidden_time_bar:
 		return
 	hidden_time_bar.value = hidden_time
-	hidden_time_label.text = "DISGUISE  %.1f s" % hidden_time
-	if hidden_time <= 1.0:
-		hidden_time_bar.modulate = Color("#ff758f")
+	hidden_time_seconds_label.text = "%.1fs" % hidden_time
+	hidden_time_bar.modulate = Color.WHITE
+	if hidden_time <= 0.0:
+		hidden_time_label.text = "DISGUISE EMPTY"
+		hidden_time_label.add_theme_color_override("font_color", Color("#aab6b8"))
+		hidden_time_seconds_label.add_theme_color_override("font_color", Color("#aab6b8"))
+		disguise_panel_style.border_color = Color("#596870")
+		hidden_time_bar_background.bg_color = Color("#26343c")
+		hidden_time_bar_fill.bg_color = Color("#596870")
+	elif hidden_mode:
+		hidden_time_label.text = "DISGUISE ACTIVE"
+		hidden_time_label.add_theme_color_override("font_color", Color("#f6d885"))
+		hidden_time_seconds_label.add_theme_color_override("font_color", Color("#f7f0dc"))
+		disguise_panel_style.border_color = Color("#f0c76b")
+		hidden_time_bar_background.bg_color = Color("#354650")
+		hidden_time_bar_fill.bg_color = Color("#65d9c5")
 	else:
-		hidden_time_bar.modulate = Color.WHITE
+		hidden_time_label.text = "DISGUISE READY"
+		hidden_time_label.add_theme_color_override("font_color", Color("#dce7e3"))
+		hidden_time_seconds_label.add_theme_color_override("font_color", Color("#dce7e3"))
+		disguise_panel_style.border_color = Color("#6f8089")
+		hidden_time_bar_background.bg_color = Color("#354650")
+		hidden_time_bar_fill.bg_color = Color("#d9b65e")
 
 
 func _add_box_mesh(parent: Node, size: Vector3, at: Vector3, color: Color) -> void:

@@ -1,0 +1,49 @@
+{
+  "description": "Reference-image rotations for camera-facing static props. The existing unsuffixed PNG is the south-facing view.",
+  "direction_order": ["south", "east", "north", "west"],
+  "directions": {
+    "east": "Show a strict orthographic right-facing side elevation. The functional front points exactly toward the right edge. The front and back faces must be edge-on and effectively invisible; show no diagonal, three-quarter, isometric, or perspective view.",
+    "north": "Rotate the object 180 degrees about its vertical axis in the world, so its functional front faces the top edge and its back is the primary visible face.",
+    "west": "Create this deterministically by horizontally mirroring the east image so left and right are the exact same side profile in reverse."
+  },
+  "prompt_template": "Use {source} as a strict character-sheet-style reference. Create the same {subject}, unchanged in design, proportions, colours, outline weight, materials, details and wear, in the requested {direction}-facing rotation: {direction_instruction} Keep the established Briefcase Game clean colourful office-cartoon style, bold dark navy outlines, polished hand-painted shading, orthographic camera elevated exactly 50 degrees above the floor with zero camera yaw, verticals vertical, and no perspective convergence. Put the object on a perfectly flat, uniform chroma-key magenta #FF00FF backdrop extending to every edge. Keep the complete object fully visible, grounded, centred, and tightly padded. Preserve lighting from upper left in world space. Produce one object only; no room, floor plane, people, text, logos, watermark, cropping, pixel art, photorealism, low-poly 3D, or pink object details.",
+  "assets": [
+    {
+      "name": "workstation",
+      "subject": "complete office workstation with its desk, monitor, lamp, mug, drawers and chair",
+      "source": "assets/scenery/generated/workstation.png",
+      "outputs": ["workstation-east.png", "workstation-north.png", "workstation-west.png"]
+    },
+    {
+      "name": "filing-cabinet",
+      "subject": "filing cabinet with its three broad drawers and brass label pulls",
+      "source": "assets/scenery/generated/filing-cabinet.png",
+      "outputs": ["filing-cabinet-east.png", "filing-cabinet-north.png", "filing-cabinet-west.png"]
+    },
+    {
+      "name": "office-printer",
+      "subject": "office multifunction printer with its scanner lid, control screen, output slot and lower cabinet",
+      "source": "assets/scenery/generated/office-printer.png",
+      "outputs": ["office-printer-east.png", "office-printer-north.png", "office-printer-west.png"]
+    },
+    {
+      "name": "vending-machine",
+      "subject": "office vending machine with its display, generic products, payment panel and dispensing slot",
+      "source": "assets/scenery/generated/vending-machine.png",
+      "outputs": ["vending-machine-east.png", "vending-machine-north.png", "vending-machine-west.png"]
+    },
+    {
+      "name": "bathroom-sinks",
+      "subject": "double-sink vanity with its two basins, faucets, mirror and cabinet",
+      "source": "assets/scenery/generated/bathroom-sinks.png",
+      "outputs": ["bathroom-sinks-east.png", "bathroom-sinks-north.png", "bathroom-sinks-west.png"]
+    },
+    {
+      "name": "bathroom-toilet",
+      "subject": "clean office toilet with its raised lid, open seat, bowl water, tank and flush button",
+      "source": "assets/scenery/generated/bathroom-toilet.png",
+      "outputs": ["bathroom-toilet-east.png", "bathroom-toilet-north.png", "bathroom-toilet-west.png"]
+    }
+  ],
+  "postprocess": "Generate and chroma-normalize the east side profile, create west by horizontally mirroring east pixel-for-pixel, and retain the independently generated north/back view. Review all four views together in the asset gallery before relying on them in the level."
+}

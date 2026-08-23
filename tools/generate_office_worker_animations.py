@@ -85,11 +85,7 @@ def front_pose(v: workers.WorkerVariant, state: str, phase: float) -> str:
 
 def side_pose(v: workers.WorkerVariant, state: str, phase: float) -> str:
     bob = -4.0 if state in ("walk", "carry_cross") and abs(phase) < 0.1 else 0.0
-    accessories = ""
-    if v.accessory == "glasses":
-        accessories = '<circle class="ink" cx="174" cy="101" r="39" fill="none"/><path class="ink" d="M211 101H228M136 101H126" fill="none"/>'
-    elif v.accessory == "lashes":
-        accessories = '<path class="fine" d="M196 76l9-10M190 71l5-13" fill="none"/>'
+    accessories = workers._side_accessories(v)
     return f'''<g transform="translate(0 {bob})">
       <ellipse cx="128" cy="302" rx="80" ry="13" fill="{workers.INK}" opacity=".12"/>
       {workers._side_hair_back(v)}{_side_limbs(v, state, phase)}

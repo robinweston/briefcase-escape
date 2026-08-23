@@ -33,3 +33,5 @@ Animation atlases are written to `assets/office_workers/animated/`. They use
 
 Gender presentation is metadata and a styling choice, not a separate body rig.
 All hair, eye, outfit, colour, and accessory modules can be combined freely.
+The current cast contains eight distinct workers so each of the six rooms can
+remain staffed while the two busier rooms retain their overlapping patrols.

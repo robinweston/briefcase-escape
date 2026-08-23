@@ -5,6 +5,7 @@ const SFX_RESUME := preload("res://assets/audio/sfx/resume_1.wav")
 
 var pause_overlay: PanelContainer
 var sound_player: AudioStreamPlayer
+var input_enabled := true
 
 
 func _ready() -> void:
@@ -18,7 +19,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("toggle_pause"):
+	if input_enabled and event.is_action_pressed("toggle_pause"):
 		var paused := not get_tree().paused
 		get_tree().paused = paused
 		pause_overlay.visible = paused

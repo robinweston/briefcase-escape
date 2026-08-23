@@ -6,7 +6,7 @@ Move in four cardinal directions with `WASD` or the arrow keys. Paired direction
 
 Office workers also move only in the four cardinal directions while patrolling, approaching, and carrying the briefcase.
 
-Press `Space` to transform into an ordinary briefcase. Workers carry a disguised briefcase to the nearest cubicle instead of catching it. Disguise time starts at five seconds and only recharges by collecting the scattered potion bottles; each bottle restores one second, up to the five-second maximum. The timer pauses while a worker is carrying the briefcase, and `Space` transforms back early after it is put down.
+You begin as an ordinary briefcase. After one second, it automatically comes to life; gameplay controls are ignored until that transformation finishes. Movement is always disabled while disguised. The opening disguise does not consume disguise time; later disguises spend it. Workers carry a disguised briefcase to the nearest cubicle instead of catching it. Disguise time starts at five seconds and only recharges by collecting the scattered potion bottles; each bottle restores one second, up to the five-second maximum. The timer pauses while a worker is carrying the briefcase, and `Space` transforms back early after it is put down.
 
 Press `P` to pause or resume the game.
 
@@ -14,7 +14,7 @@ Major actions use the selected soft-office sound-effect set: starting, walking,
 transforming, collecting potions, worker alerts, pickup/drop, being caught,
 completing the level, and pausing/resuming all have distinct cues.
 
-The game opens on the **Briefcase Escape** title screen. Review the objective and controls there, then press `Space` to start the first level.
+The game opens on the **Briefcase Escape** title screen. Review the instructions and controls there, then press `Space`, `Enter`, or gamepad Start to begin. After the worker's surprise animation, being caught opens an **Escape Report**; press `Space` to retry. Reaching the exit opens the matching cleared report; press Start to continue to the next floor. The current prototype reuses the same office layout for subsequent floor numbers.
 
 The title screen and first level share a continuous loop of **Stealth in the
 Woods**, layered with busy office chatter, phones, writing, and typing.
@@ -98,11 +98,16 @@ Open `http://localhost:8080`. Web exports must be served over HTTP; opening `ind
 - `assets/briefcase_hidden.svg` is the matching ordinary-case disguise artwork.
 - `assets/briefcase.svg` remains as the original static player-art fallback.
 - `assets/scenery/generated/` contains the illustrated workstation, divider,
-  cabinet, plant, start-zone, and exit-sign sprites used by the level and gallery.
+  cabinet, plant, printer, vending machine, bathroom fixtures, exit-sign, and
+  disguise-potion sprites used by the level and gallery.
 - `assets/audio/` contains the CC0 music candidates, busy office ambience, 36 original sound-effect candidates, and source/license notes.
 - `tools/generate_briefcase_walk_atlas.py` regenerates both matching briefcase vector assets.
 - `tools/generate_office_worker_variants.py` defines modular worker appearances.
 - `tools/generate_office_worker_animations.py` regenerates worker animation atlases.
+- `tools/office_prop_prompts.jsonl` records the OpenAI Image API prompt set for
+  the printer, vending machine, sinks, and toilet scenery.
+- `tools/office_prop_rotation_manifest.json` defines the reference-image prompts,
+  filenames, and S/E/N/W ordering for directional static-prop views.
 - `tools/generate_sound_effects.py` regenerates the original procedural sound-effect candidates.
 - `asset_gallery.tscn` provides a standalone home for animated and static asset previews.
 - `export_presets.cfg` contains the browser export settings.

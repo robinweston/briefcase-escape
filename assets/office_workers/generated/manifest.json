@@ -88,5 +88,35 @@
     "accessory": "lashes",
     "front": "f-creative-front.svg",
     "side": "f-creative-side.svg"
+  },
+  {
+    "id": "g-coordinator",
+    "name": "Calm Coordinator",
+    "presentation": "woman",
+    "skin": "#c98f6f",
+    "hair": "ponytail",
+    "hair_color": "#284a54",
+    "eyes": "soft",
+    "outfit": "blouse",
+    "outfit_color": "#4f8f86",
+    "accent_color": "#f0c36a",
+    "accessory": "headset",
+    "front": "g-coordinator-front.svg",
+    "side": "g-coordinator-side.svg"
+  },
+  {
+    "id": "h-specialist",
+    "name": "Resourceful Specialist",
+    "presentation": "non-binary",
+    "skin": "#6f4938",
+    "hair": "coils",
+    "hair_color": "#211b24",
+    "eyes": "classic",
+    "outfit": "shirt",
+    "outfit_color": "#596aa8",
+    "accent_color": "#c4e1d2",
+    "accessory": "earrings",
+    "front": "h-specialist-front.svg",
+    "side": "h-specialist-side.svg"
   }
 ]

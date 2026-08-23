@@ -4,19 +4,20 @@
 
 Briefcase Game is a browser-first Godot 4 stealth game set in an illustrated office. The player guides a camera-facing briefcase through a scrolling maze of cubicles while avoiding patrolling office workers and their visible sight cones.
 
-The goal is to travel from the start of the office to the exit. Being seen normally resets the level. The briefcase can temporarily disguise itself as an ordinary case, causing a worker to carry it somewhere else instead of catching it.
+The goal is to travel from the start of the office to the exit. Being seen plays the worker's surprise reaction, then opens an Escape Report and waits for Space before retrying. The briefcase can temporarily disguise itself as an ordinary case, causing a worker to carry it somewhere else instead of catching it.
 
 ## Current behaviour
 
 - Move with `WASD` or the arrow keys.
 - Movement is limited to four screen-aligned cardinal directions; diagonal input resolves to one axis.
 - Press `Space` to toggle the temporary disguise.
+- The level starts in a free disguise, ignores controls for one second, then automatically animates the briefcase to life; later disguises consume disguise time.
 - Collectibles replenish disguise time.
 - Press `P` to pause or resume.
 - Workers patrol fixed routes, face their movement direction, react to the player, and collide with office geometry.
 - Visible vision cones match the real detection angle and range and are clipped by sight-blocking geometry.
 - Office furniture and walls provide movement obstacles, cover, and readable stealth routes.
-- Reaching the exit completes and freezes the level.
+- Reaching the exit opens a cleared Escape Report and waits for Start before continuing.
 - There is deliberately no click-to-move or touch-to-move behaviour.
 
 ## Camera and isometric presentation
@@ -49,6 +50,19 @@ The established style is a clean, colourful office cartoon with bold outlines, r
 
 Avoid mixing in pixel art, photorealistic characters, or unrelated low-poly styles. Review new artwork beside the existing cast and scenery before adding it to gameplay.
 
+## Static asset viewpoints
+
+Directional static props use four cardinal views that must agree with the axis-aligned office layout. Treat the un-suffixed source image as the canonical south/front view, then produce the other views according to this contract:
+
+- **South:** the functional front faces the bottom edge of the image and remains the canonical source view.
+- **North:** rotate the prop 180 degrees around its vertical axis so the functional front faces the top edge and the back is the primary visible face.
+- **East:** show a strict orthographic right-facing side elevation. The functional front points exactly toward the right edge; its front and back faces are edge-on. Do not use a diagonal, three-quarter, isometric, or perspective view.
+- **West:** horizontally mirror the approved east image pixel-for-pixel. Never generate west independently. East and west must be the identical side profile in reverse, including dimensions, silhouette, grounding, lighting, and transparent padding.
+
+Generate or edit the east view from the canonical prop, normalize it, and derive west only after east passes review. Preserve the same object design, proportions, declared tile footprint, camera pitch, outline weight, and contact point across all views. A directional image is invalid if it exposes both the front and a side face, changes the prop's apparent footprint, or uses canvas padding to shift its placement.
+
+Before adding directional props to gameplay, compare all four views together in the asset gallery, verify east and west with an exact horizontal-mirror pixel comparison, and run `./capture-level-map.sh` to confirm that placed props face their walls and routes cleanly. Keep `tools/office_prop_rotation_manifest.json` and the relevant generator in sync with this contract.
+
 ## Sound direction
 
 The sound style is playful, understated office stealth. It combines a light suspenseful music bed with recognisable workplace ambience and soft, distinct action cues.
@@ -68,6 +82,14 @@ The main scene contains a minimal root node, while the primary gameplay script c
 Supporting scripts separate title-screen behaviour, pause handling, shared animation setup, and the standalone asset gallery. Continue splitting out systems when the main gameplay script becomes difficult to navigate, but keep changes small and prototype-friendly.
 
 The asset gallery is the preferred place to compare character animation, scenery, music, ambience, and sound effects without running the full level.
+
+## Static layout grid
+
+Static scenery and dividers use a 0.5-world-unit tile. Depth-bearing props declare an integer `Vector3i(width, height, depth)` tile size; their collision footprint and on-screen billboard dimensions are derived from that single declaration. Billboard height must use the gameplay camera pitch so illustrated depth stays proportional across every asset.
+
+Tile placement, adjacency, and row spacing are determined only by a prop's base contact footprint (`width` by `depth`), never by its illustrated height or full transparent-image bounds. Place ordinary adjacent props so their base footprints meet on the grid. Repeated depth-stacked banks, such as filing cabinets, may use a smaller explicit base-contact stride so foreground sprites occlude the bodies behind them; assign deterministic back-to-front render priorities and preserve only the rear props' readable top edges. Keep sprites grounded at their footprint centres and never add layout gaps merely to prevent tall artwork from overlapping.
+
+Dividers declare an integer `Vector2i(width, depth)` tile footprint and integer tile height. Their visible and collision wall may remain a thin inset within the occupied tile row, but their span must be a whole number of tiles. Place new static assets on the same half-unit grid and do not add independent hand-tuned sprite sizes or collision dimensions.
 
 ## Input-map warning
 
@@ -94,6 +116,8 @@ The browser is a primary target, not an optional port:
 
 ## Running and validation
 
+When running the game to test or inspect it, disable or mute its sound. Only enable sound when the task specifically requires audio validation.
+
 Use the project launcher for normal browser development:
 
 ```sh
@@ -118,6 +142,12 @@ Review visual and audio work independently with:
 ./view-gallery.sh
 ```
 
+The committed [whole-level snapshot](level-layout-snapshot.png) shows the current office layout and colour-coded worker patrol routes without launching the game. Regenerate it after level-layout or patrol-route changes with:
+
+```sh
+./capture-level-map.sh
+```
+
 After gameplay, input, camera, rendering, audio, or export changes:
 
 1. Run the headless project and check for runtime errors.
@@ -130,8 +160,12 @@ After gameplay, input, camera, rendering, audio, or export changes:
 ## Asset generation
 
 - Never print, log, paste, or commit locally stored API keys.
+- OpenAI image generation uses `OPENAI_API_KEY`, which is stored locally in the repository's `.env` file. The file is gitignored and must remain uncommitted.
+- Before running an OpenAI image-generation script, load the key into the current shell with `set -a; source .env; set +a`, then run the generator from that same shell. Check that it is available with `test -n "${OPENAI_API_KEY:-}"` rather than printing its value.
+- Pass the key to OpenAI through the `OPENAI_API_KEY` environment variable. Never place it in prompts, command-line arguments, source files, generated metadata, or logs.
 - Keep secrets and temporary generation files out of the shipped asset directories.
 - Store only final game-ready assets under `assets/`.
+- Run depth-bearing scenery through `tools/normalize_prop_assets.py` so transparent canvas padding does not change its declared tile dimensions.
 - Update the relevant generator whenever a generated asset is intentionally changed.
 - Review generated visual and audio work in the asset gallery before wiring it into gameplay.
 
